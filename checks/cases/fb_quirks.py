@@ -35,6 +35,8 @@ STEAM_DECK = [smbios(1, manufacturer='Valve', product='Jupiter', version='1')]
 DYNABOOK_K50 = [smbios(1, manufacturer='Dynabook Inc.', product='dynabook K50/FR')]
 # The early Intel Mac whose firmware gives its framebuffer a wrong pitch.
 MACBOOK_AIR_3_1 = [smbios(0, vendor='Apple Inc.'), smbios(1, product='MacBookAir3,1')]
+# A Mac whose GOP reports 8-bit RGB for a BGR framebuffer.
+MACBOOK_AIR_2_1 = [smbios(0, vendor='Apple Inc.'), smbios(1, product='MacBookAir2,1')]
 
 
 def default_strings(date):
@@ -333,7 +335,7 @@ def fb_quirks_for_limine_only(t):
     it as the firmware reports it, as are Multiboot 1 and 2 kernels
     [intent]. Here an 800x600 mode, a portrait panel's on UEFI and an early
     Intel Mac's on BIOS."""
-    from cases.linux import bzimage, hexint, stub, stub_report, x86_report
+    from cases.linux import bzimage, hexint, x86_report
     if t.port.is_uefi:
         machine, corrected = MIIX_320, '600x800x32 pitch=2400'
     else:
@@ -341,18 +343,13 @@ def fb_quirks_for_limine_only(t):
     mode = 'resolution: 800x600x32'
     t.expect_eq(geometry(protocol_report(t, machine, mode)['framebuffer.0']), corrected,
                 'the Limine protocol: the mode corrected')
-    if t.port.is_x86:
-        path, image, report, prefix = '/bzImage', bzimage(t), x86_report, 'si.'
-    else:
-        path, image, report, prefix = '/Image', stub(t), stub_report, 'screen_info.'
+    path, image, report, prefix = '/bzImage', bzimage(t), x86_report, 'si.'
     config = 'timeout: 0\n' + entry('Linux', protocol='linux', path=f'boot():{path}', cmdline='x', extra=mode)
     m = boot_machine(t, machine, config, {path: image})
     r = report(t, m)
     t.expect_eq(tuple(hexint(r, prefix + k) for k in ('width', 'height', 'linelength')), (800, 600, 3200),
                 'Linux: the mode as reported')
     m.stop()
-    if not t.port.is_x86:
-        return
     for protocol, kernel, mb_report in (('multiboot1', mb1_kernel(t, 'video'), mb1_report),
                                         ('multiboot2', mb2_kernel(t, 'fb'), mb2_report)):
         config = 'timeout: 0\n' + entry('MB', protocol=protocol, path='boot():/kernel', cmdline='x')
@@ -386,3 +383,21 @@ def fb_quirks_mac_pitch(t):
     earlier = [smbios(0, vendor='Apple Inc.'), smbios(1, product='MacBookAir1,1 MacBookAir3,1')]
     t.expect_eq(protocol_report(t, earlier)['framebuffer.0'], plain['framebuffer.0'],
                 'an entry for MacBookAir1,1 matching first')
+
+
+@check(ports=UEFI_PORTS, tags=['fb-quirks', 'limine-protocol', 'gop'])
+def fb_quirks_bgr_macs(t):
+    """On a Mac SMBIOS names as one whose GOP reports 8-bit RGB for a BGR
+    framebuffer."""
+    rgb, bgr = 'r=8:0 g=8:8 b=8:16', 'r=8:16 g=8:8 b=8:0'
+    plain = protocol_report(t, [])
+    t.check(rgb in plain['framebuffer.0'], f'the current mode reported as 8-bit RGB: {plain["framebuffer.0"]}')
+    r = protocol_report(t, MACBOOK_AIR_2_1)
+    t.expect_eq(r['framebuffer.0'], plain['framebuffer.0'].replace(rgb, bgr), 'the current mode')
+    t.expect_eq(r.indexed('framebuffer.0.mode'),
+                [m.replace(rgb, bgr) for m in plain.indexed('framebuffer.0.mode')], 'the modes')
+    macmini = [smbios(0, vendor='Apple Inc.'), smbios(1, product='Macmini3,1')]
+    t.expect_eq(protocol_report(t, macmini)['framebuffer.0'], plain['framebuffer.0'].replace(rgb, bgr),
+                'the Macmini3,1')
+    unlisted = [smbios(0, vendor='Apple Inc.'), smbios(1, product='Macmini2,1')]
+    t.expect_eq(protocol_report(t, unlisted)['framebuffer.0'], plain['framebuffer.0'], 'an unlisted Mac')

@@ -140,14 +140,11 @@ def tpm_linux_event_log(t):
     configuration table USAGE.md names: the crypto-agile log, version 2,
     beginning with the Spec ID event (TCG PC Client PFP 1.06 revision 52,
     10.4.5.1), and of the final events table no more than it holds [spec]."""
-    from cases.linux import bzimage, stub, stub_report, x86_report
-    if t.port.is_x86:
-        files, path = {'/bzImage': bzimage(t)}, 'boot():/bzImage'
-    else:
-        files, path = {'/Image': stub(t)}, 'boot():/Image'
+    from cases.linux import bzimage, x86_report
+    files, path = {'/bzImage': bzimage(t)}, 'boot():/bzImage'
     config = 'timeout: 0\nmeasured_boot: yes\n' + entry('Linux', protocol='linux', path=path, cmdline='tpm')
     m = tpm_boot(t, config, files)
-    r = x86_report(t, m) if t.port.is_x86 else stub_report(t, m)
+    r = x86_report(t, m)
     t.require('tpm_log.size' in r, 'the TPM event log table installed')
     size, preboot = int(r['tpm_log.size'], 16), int(r['tpm_log.final_events_preboot_size'], 16)
     t.expect_eq(int(r['tpm_log.version'], 16), 2, 'version 2: the crypto-agile log')
@@ -281,14 +278,14 @@ def tpm_cc_linux(t):
     kernel image as read from disk and the initrd into PCR 9 [spec]. With
     the protocol's GetEventLog() failing there is no log to pass on, and
     no TPM event log table [intent]."""
-    from cases.linux import bzimage, stub, stub_report, x86_report
-    image = bzimage(t) if t.port.is_x86 else stub(t)
-    path, kernel = ('/bzImage' if t.port.is_x86 else '/Image'), read(image.path)
+    from cases.linux import bzimage, x86_report
+    image = bzimage(t)
+    path, kernel = '/bzImage', read(image.path)
     initrd = b'measured initrd\n' * 9
     config = 'timeout: 0\nmeasured_boot: yes\n' + entry('Linux', protocol='linux', path=f'boot():{path}',
                                                          cmdline='cc linux', modules=[('boot():/initrd', None)])
     m = cc_boot(t, 4, config, {path: kernel, '/initrd': initrd})
-    r = x86_report(t, m) if t.port.is_x86 else stub_report(t, m)
+    r = x86_report(t, m)
     text = m.stream(t.kernel_channel).text()
     evs = [e for e in cc_extends(text) if e[0] >= 8]
     want = [(8, b'cc linux', 'cmdline: cc linux'), (8, f'boot():{path}'.encode(), f'path: boot():{path}'),
