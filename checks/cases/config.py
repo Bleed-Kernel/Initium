@@ -8,10 +8,8 @@ from cases._common import entry, kernel_file, wait_panic
 # The configuration file: where it is found and how it is read. Expectations
 # come from CONFIG.md unless marked [intent].
 
-ARCH = {'bios': 'x86-64', 'uefi-ia32': 'x86-64', 'uefi-x86-64': 'x86-64', 'uefi-aarch64': 'aarch64',
-        'uefi-riscv64': 'riscv64', 'uefi-loongarch64': 'loongarch64'}
-LOADER_ARCH = {'bios': 'ia-32', 'uefi-ia32': 'ia-32', 'uefi-x86-64': 'x86-64', 'uefi-aarch64': 'aarch64',
-               'uefi-riscv64': 'riscv64', 'uefi-loongarch64': 'loongarch64'}
+ARCH = {'bios': 'x86-64', 'uefi-ia32': 'x86-64', 'uefi-x86-64': 'x86-64'}
+LOADER_ARCH = {'bios': 'ia-32', 'uefi-ia32': 'ia-32', 'uefi-x86-64': 'x86-64'}
 
 
 SMBIOS_GUID = 'eb9d2d31-2d88-11d3-9a16-0090273fc14d'
@@ -32,9 +30,9 @@ def booted_cmdline(t, m, timeout=60):
 
 
 def boot_config(t, config, files=None, **machine):
-    """Boot a disk with config at /boot/limine.conf; the cmdline booted."""
+    """Boot a disk with config at /boot/initium.conf; the cmdline booted."""
     tree = with_kernel(t)
-    tree.add('/boot/limine.conf', config)
+    tree.add('/boot/initium.conf', config)
     for path, data in (files or {}).items():
         tree.add(path, data)
     m = t.boot(t.boot_disk(tree), **machine)
@@ -42,8 +40,8 @@ def boot_config(t, config, files=None, **machine):
 
 
 def candidates(t):
-    names = ['/boot/limine/limine.conf', '/boot/limine.conf', '/limine/limine.conf', '/limine.conf']
-    return (['/EFI/BOOT/limine.conf'] if t.port.is_uefi else []) + names
+    names = ['/boot/initium/initium.conf', '/boot/initium.conf', '/initium/initium.conf', '/initium.conf']
+    return (['/EFI/BOOT/initium.conf'] if t.port.is_uefi else []) + names
 
 
 @check(ports=ALL_PORTS, tags=['config'])
@@ -61,7 +59,7 @@ def config_search_order(t):
 
 @check(ports=UEFI_PORTS, tags=['config'])
 def config_efi_app_directory(t):
-    """On EFI, <EFI app path>/limine.conf comes first, and /EFI/BOOT/limine.conf
+    """On EFI, <EFI app path>/initium.conf comes first, and /EFI/BOOT/initium.conf
     is only tried in its stead where that path cannot be determined."""
     efi_name = t.port.efi_name
     arch = {'uefi-ia32': 'ia32', 'uefi-x86-64': 'x86_64'}.get(t.port.name, t.port.arch)
@@ -73,9 +71,9 @@ def config_efi_app_directory(t):
         tree.add('/efiprobe.cmd', f'name:outer chain:\\EFI\\custom\\{efi_name}\n')
         tree.add('/EFI/custom/' + efi_name, HostFile(t.env.bin(efi_name)))
         if with_app_config:
-            tree.add('/EFI/custom/limine.conf', kernel_config('app directory'))
-        tree.add('/EFI/BOOT/limine.conf', kernel_config('EFI/BOOT'))
-        tree.add('/boot/limine.conf', kernel_config('boot directory'))
+            tree.add('/EFI/custom/initium.conf', kernel_config('app directory'))
+        tree.add('/EFI/BOOT/initium.conf', kernel_config('EFI/BOOT'))
+        tree.add('/boot/initium.conf', kernel_config('boot directory'))
         m = t.boot(t.boot_disk(tree))
         t.expect_eq(booted_cmdline(t, m), want, f'app directory config {"present" if with_app_config else "absent"}')
         m.stop()
@@ -103,12 +101,12 @@ def two_partition_disk(t, first, second):
 
 @check(ports=ALL_PORTS, tags=['config'])
 def config_partition_order(t):
-    """On EFI the volume holding Limine is searched first; then, and on BIOS,
+    """On EFI the volume holding Initium is searched first; then, and on BIOS,
     the partitions in order."""
     first = with_kernel(t, Tree())
     second = with_kernel(t, Tree())
-    first.add('/limine.conf', kernel_config('partition 1'))
-    second.add('/limine.conf', kernel_config('partition 2'))
+    first.add('/initium.conf', kernel_config('partition 1'))
+    second.add('/initium.conf', kernel_config('partition 2'))
     if t.port.is_uefi:
         # limine_files() put the EFI executable in both; it boots from the ESP.
         first.files.pop('/EFI/BOOT/' + t.port.efi_name)
@@ -116,22 +114,22 @@ def config_partition_order(t):
     t.expect_eq(booted_cmdline(t, m), 'partition 2' if t.port.is_uefi else 'partition 1', 'config chosen')
     m.stop()
     if t.port.is_uefi:
-        second.files.pop('/limine.conf')
+        second.files.pop('/initium.conf')
         m = t.boot(two_partition_disk(t, first, second))
         t.expect_eq(booted_cmdline(t, m), 'partition 1', 'without one in its own volume, the first partition\'s')
 
 
 @check(ports=ALL_PORTS, tags=['config'])
 def config_from_smbios(t):
-    """An SMBIOS type 11 string starting limine:config: is the config, ahead
+    """An SMBIOS type 11 string starting initium:config: is the config, ahead
     of any file. Its boot() is undefined on BIOS, so the kernel is named by
     drive there."""
     path = 'hdd(1:1):/boot/kernel.elf' if not t.port.is_uefi else 'boot():/boot/kernel.elf'
     smbios_file = t.path('smbios.txt')
     with open(smbios_file, 'w') as f:
-        f.write('limine:config:' + kernel_config('from SMBIOS', path=path))
+        f.write('initium:config:' + kernel_config('from SMBIOS', path=path))
     tree = with_kernel(t)
-    tree.add('/boot/limine.conf', kernel_config('from the disk'))
+    tree.add('/boot/initium.conf', kernel_config('from the disk'))
     m = t.boot(t.boot_disk(tree), smbios=[f'type=11,path={smbios_file}'])
     t.expect_eq(booted_cmdline(t, m), 'from SMBIOS', 'config taken from SMBIOS')
 
@@ -145,7 +143,7 @@ def config_from_smbios_out_of_reach(t):
     from cases.chainload import probe_then_limine
     smbios_file = t.path('smbios.txt')
     with open(smbios_file, 'w') as f:
-        f.write('limine:config:' + kernel_config('from SMBIOS'))
+        f.write('initium:config:' + kernel_config('from SMBIOS'))
     m = probe_then_limine(t, 'tables smbios3:fffffffffffff000:2000', kernel_config('from the disk'),
                           {'/boot/kernel.elf': HostFile(kernel_file(t, 'full'))},
                           smbios=[f'type=11,path={smbios_file}'])
@@ -218,7 +216,7 @@ def config_macros(t):
 
 @check(ports=ALL_PORTS, tags=['config', 'hostile'])
 def config_malformed(t):
-    """[intent] Configs Limine refuses: an entry two levels below the one
+    """[intent] Configs Initium refuses: an entry two levels below the one
     before it, or below none, directories more than 64 deep, a macro
     reference with no closing brace, a macro name or value past its buffer,
     and an enrolled config hash that is not hexadecimal. A macro may stand
@@ -236,7 +234,7 @@ def config_malformed(t):
     ]
     for config, want in cases:
         tree = with_kernel(t)
-        tree.add('/boot/limine.conf', config)
+        tree.add('/boot/initium.conf', config)
         m = t.boot(t.boot_disk(tree))
         msg, _ = wait_panic(t, m)
         t.expect_eq(msg, want, config[:24])
@@ -245,7 +243,7 @@ def config_malformed(t):
                                                                        cmdline='keyed'))
     t.expect_eq(cmdline, 'keyed', 'a macro standing for the timeout key')
     m.stop()
-    name = t.port.efi_name if t.port.is_uefi else 'limine-bios.sys'
+    name = t.port.efi_name if t.port.is_uefi else 'initium-bios.sys'
     with open(t.env.bin(name), 'rb') as f:
         image = f.read()
     at = image.index(b'++CONFIG_B2SUM_SIGNATURE++') + len(b'++CONFIG_B2SUM_SIGNATURE++')
@@ -253,8 +251,8 @@ def config_malformed(t):
     with open(patched, 'wb') as f:
         f.write(image[:at] + b'g' * 128 + image[at + 128:])
     tree = with_kernel(t)
-    tree.add('/boot/limine.conf', kernel_config('x'))
-    tree.add(('/EFI/BOOT/' + name) if t.port.is_uefi else '/boot/limine-bios.sys', HostFile(patched))
+    tree.add('/boot/initium.conf', kernel_config('x'))
+    tree.add(('/EFI/BOOT/' + name) if t.port.is_uefi else '/boot/initium-bios.sys', HostFile(patched))
     msg, _ = wait_panic(t, t.boot(t.boot_disk(tree)))
     t.expect_eq(msg, '!!! INVALID CHARACTER IN CONFIG CHECKSUM !!!', 'an enrolled hash with a non-hex digit')
 
@@ -280,7 +278,7 @@ def config_many_entries(t):
     last = '/Last of many\n    comment: the last comment\n    protocol: limine\n' \
            '    path: boot():/boot/kernel.elf\n    cmdline: last of many\n'
     tree = with_kernel(t)
-    tree.add('/boot/limine.conf', many_entries_config(snapshots, last))
+    tree.add('/boot/initium.conf', many_entries_config(snapshots, last))
     m = t.boot(t.boot_disk(tree))
     wait_menu(t, m)
     m.press('end')
@@ -310,7 +308,7 @@ def config_line_ends(t):
     m.stop()
     kernel = '    protocol: limine\n    path: boot():/boot/kernel.elf\n    cmdline: x\n'
     tree = with_kernel(t)
-    tree.add('/boot/limine.conf', 'timeout: no\n/\tTabbed\n' + kernel + '/ Spaced\n' + kernel + '/Plain\n' + kernel)
+    tree.add('/boot/initium.conf', 'timeout: no\n/\tTabbed\n' + kernel + '/ Spaced\n' + kernel + '/Plain\n' + kernel)
     scr = wait_menu(t, t.boot(t.boot_disk(tree)))
     columns = {name: scr.find_one(name)[0] for name in ('Tabbed', 'Spaced', 'Plain')}
     t.expect_eq(len(set(columns.values())), 1, f'names in one column: {columns}')
@@ -323,8 +321,8 @@ def config_entry_conditions(t):
     left is the default."""
     fw = 'UEFI' if t.port.is_uefi else 'BIOS'
     other_fw = 'BIOS' if t.port.is_uefi else 'UEFI'
-    others = [a for a in ('x86-64', 'ia-32', 'aarch64', 'riscv64', 'loongarch64') if a != ARCH[t.port.name]]
-    other_loader = [a for a in ('x86-64', 'ia-32', 'aarch64', 'riscv64', 'loongarch64')
+    others = [a for a in ('x86-64', 'ia-32') if a != ARCH[t.port.name]]
+    other_loader = [a for a in ('x86-64', 'ia-32')
                     if a != LOADER_ARCH[t.port.name]]
     chain = entry('Other firmware chainload', protocol='bios' if t.port.is_uefi else 'efi',
                   path='boot():/nothing.efi')
@@ -337,8 +335,8 @@ def config_entry_conditions(t):
               + entry('Wrong loader', path='boot():/boot/kernel.elf', cmdline='wrong 3',
                       extra=f'if_loader_arch: {" ".join(other_loader)}')
               + entry('Right', path='boot():/boot/kernel.elf', cmdline='right',
-                      extra=f'if_fw_type: {fw}\nif_arch: aarch64 {ARCH[t.port.name]}\n'
-                            f'if_loader_arch: {LOADER_ARCH[t.port.name]} riscv64'))
+                      extra=f'if_fw_type: {fw}\nif_arch: none {ARCH[t.port.name]}\n'
+                            f'if_loader_arch: {LOADER_ARCH[t.port.name]} none'))
     cmdline, _ = boot_config(t, config)
     t.expect_eq(cmdline, 'right', 'the one entry left shown')
 
@@ -390,7 +388,7 @@ def config_default_entry_unbootable(t):
     nothing or a directory, disables autoboot even with timeout 0."""
     for default in ('0', '9', 'Nope', 'Directory/Nope', 'Directory'):
         tree = with_kernel(t)
-        tree.add('/boot/limine.conf', tree_config(default))
+        tree.add('/boot/initium.conf', tree_config(default))
         m = t.boot(t.boot_disk(tree))
         scr = wait_menu(t, m)
         t.check(scr.find('First'), f'default_entry: {default}: menu shown')

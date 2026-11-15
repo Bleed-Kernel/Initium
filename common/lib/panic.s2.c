@@ -105,15 +105,7 @@ noreturn void panic(bool allow_menu, const char *fmt, ...) {
 #elif defined(UEFI)
         print("System halted.");
         for (;;) {
-#if defined(__x86_64__) || defined(__i386__)
             asm ("hlt");
-#elif defined(__aarch64__) || defined(__riscv)
-            asm ("wfi");
-#elif defined(__loongarch64)
-            asm ("idle 0");
-#else
-#error Unknown architecture
-#endif
         }
 #endif
     }

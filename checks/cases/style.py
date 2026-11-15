@@ -5,8 +5,8 @@ import sys
 from harness.api import check
 from harness.env import SRCDIR
 
-# checks/check-style, which holds the code to the style rules of
-# CONTRIBUTING.md that no older code breaks, and the code it checks.
+# checks/check-style, which holds the code to the project's style rules
+# that no older code breaks, and the code it checks.
 
 CHECKER = os.path.join(SRCDIR, 'checks', 'check-style')
 
@@ -30,9 +30,6 @@ FOLLOW = {
     'checks/sim/stubs/sys/stub.h': '#ifndef SYS__STUB_H\n#define SYS__STUB_H\n\n#endif\n',
     'host/tool.h': '#ifndef TOOL_H\n#define TOOL_H\n\n#endif\n',
     'config.h.in': '#ifndef CONFIG_H\n#define CONFIG_H\n\n#define X "@X@"\n\n#endif\n',
-    'common/lib/macros.aarch64_asm.h': '#ifndef LIB__MACROS_AARCH64_ASM_H\n'
-                                       '#define LIB__MACROS_AARCH64_ASM_H\n\n'
-                                       '.macro NOTHING\n.endm\n\n#endif\n',
     'common/nasm.asm_x86': '; As defined (by the spec).\n',
     'docs/NOTES.md': 'An enum is defined (here).\n'
 }
@@ -47,8 +44,6 @@ BREAK = {
                        'common/space.S:1: `defined (`'),
     'common/linker.ld.in': ('#if defined (A)\n#endif\n',
                             'common/linker.ld.in:1: `defined (`'),
-    'common/gas.asm_riscv64': ('#if defined (A)\n#endif\n',
-                               'common/gas.asm_riscv64:1: `defined (`'),
     'common/anonymous.c': ('enum { A, B };\n',
                            'common/anonymous.c:1: an `enum`'),
     'common/typed.c': ('int a;\n\ntypedef enum {\n    A\n} e_t;\n',
@@ -109,7 +104,7 @@ def make_repo(t, files):
 
 @check(ports=['bios'], tags=['ci'])
 def style_tree_follows(t):
-    """Limine's own code keeps every rule the check holds it to."""
+    """Initium's own code keeps every rule the check holds it to."""
     res = subprocess.run(['git', '-C', SRCDIR, 'rev-parse', '--git-dir'], stdout=subprocess.PIPE,
                          stderr=subprocess.DEVNULL)
     if res.returncode != 0:

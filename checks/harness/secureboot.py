@@ -1,4 +1,4 @@
-"""UEFI Secure Boot for the checks: one set of keys (PK, KEK, db), Limine and
+"""UEFI Secure Boot for the checks: one set of keys (PK, KEK, db), Initium and
 payloads signed with the db key, and variable stores with the keys enrolled
 and Secure Boot on, from the firmware's -secboot images."""
 
@@ -47,7 +47,7 @@ def keys(env):
         for name, (key, cert) in out.items():
             if not os.path.exists(cert):
                 _run([which('openssl'), 'req', '-new', '-x509', '-newkey', 'rsa:2048', '-nodes', '-sha256',
-                      '-days', '3650', '-subj', f'/CN=Limine test {name}/', '-keyout', key, '-out', cert])
+                      '-days', '3650', '-subj', f'/CN=Initium test {name}/', '-keyout', key, '-out', cert])
     return out
 
 

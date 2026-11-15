@@ -10,10 +10,10 @@ from harness import images, secureboot
 from harness.screen import Font, builtin_font
 from cases._common import entry, kernel_file, screen_text, wait_panic
 
-# UEFI Secure Boot: what USAGE.md ("Secure Boot") says Limine enforces once
+# UEFI Secure Boot: what USAGE.md ("Secure Boot") says Initium enforces once
 # Secure Boot is active and a config hash is enrolled, and that without an
 # enrolled hash it treats Secure Boot as inactive. [intent] marks what only
-# Limine's code says.
+# Initium's code says.
 
 
 def b2(data):
@@ -28,24 +28,24 @@ def need_firmware(t):
 
 
 def limine_efi(t, config=None):
-    """Limine signed with the db key, with config's hash enrolled first."""
+    """Initium signed with the db key, with config's hash enrolled first."""
     name = t.port.efi_name
     path = t.path(name)
     shutil.copyfile(t.env.bin(name), path)
     if config is not None:
-        res = subprocess.run([t.env.bin('limine'), 'enroll-config', '--quiet', path, b2(config.encode())],
+        res = subprocess.run([t.env.bin('initium'), 'enroll-config', '--quiet', path, b2(config.encode())],
                              stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
         t.require(res.returncode == 0, f'enroll-config: {res.stdout.decode()}')
     return secureboot.sign(t.env, path, t.path('signed-' + name))
 
 
 def sb_boot(t, config, enrolled=True, files=None, keys=True, **machine):
-    """Boot signed Limine with config, its hash enrolled unless not enrolled,
+    """Boot signed Initium with config, its hash enrolled unless not enrolled,
     on firmware with the checks' keys enrolled, or with none (Setup Mode)."""
     code, template = need_firmware(t)
     tree = Tree()
     tree.add('/EFI/BOOT/' + t.port.efi_name, HostFile(limine_efi(t, config if enrolled else None)))
-    tree.add('/boot/limine.conf', config)
+    tree.add('/boot/initium.conf', config)
     kernel = open(kernel_file(t, 'full'), 'rb').read()
     tree.add('/boot/kernel.elf', kernel)
     for path, data in (files or {}).items():
@@ -88,7 +88,7 @@ def sb_config_mismatch(t):
     config = 'timeout: 0\n' + kernel_entry(t)
     tree = Tree()
     tree.add('/EFI/BOOT/' + t.port.efi_name, HostFile(limine_efi(t, config)))
-    tree.add('/boot/limine.conf', config.replace('secure boot', 'tampered'))
+    tree.add('/boot/initium.conf', config.replace('secure boot', 'tampered'))
     tree.add('/boot/kernel.elf', HostFile(kernel_file(t, 'full')))
     vars_path = secureboot.enrolled_vars(t.env, t.port, t.path('sbvars.fd'))
     m = t.boot(t.boot_disk(tree), code_file=code, vars_file=vars_path, **secureboot.machine_options(t.port))

@@ -220,11 +220,9 @@ out:
     }
 
     for (size_t i = 0; i < print_buf_i; i++) {
-#if defined(__x86_64__) || defined(__i386__)
         if (E9_OUTPUT) {
             outb(0xe9, print_buf[i]);
         }
-#endif
 #if defined(BIOS)
         if (stage3_loaded && ((!quiet && serial) || COM_OUTPUT)) {
             if (!isprint(print_buf[i])) {

@@ -12,7 +12,7 @@ from cases.menu import EDITOR_ENTRY, booted_cmdline, nothing_booted, tree_menu, 
 # drivers; edk2 firmware exposes no pointer for QEMU's USB tablet).
 
 ABS_MAX = 0x7fff
-# Motion counts per column and per row [intent]: Limine takes 8 PS/2 counts
+# Motion counts per column and per row [intent]: Initium takes 8 PS/2 counts
 # a column and 16 a row, and a cell as 2mm by 4mm of a simple pointer's
 # motion; the edk2 firmware gives a USB mouse 8 counts a millimetre.
 COUNTS = {'ps2': (8, 16), 'usb-mouse': (16, 32)}
@@ -26,7 +26,7 @@ def mouse_boot(t, config, mouse=None):
     tree = Tree()
     tree.add('/boot/kernel.elf', HostFile(kernel_file(t, 'full')))
     t.limine_files(config, tree)
-    # No boot order: given one, RISC-V's edk2 connects only the devices it
+    # No boot order: given one, some edk2 builds connect only the devices it
     # lists, and the pointer stays without a driver.
     return t.boot(drives=[Drive(t.boot_disk(tree).path)], mouse=mouse or default_mouse(t))
 
@@ -55,7 +55,7 @@ class Pointer:
         if self.mouse not in COUNTS:
             self.m.mouse_abs(int((x + 0.5) * ABS_MAX / self.cols), int((y + 0.5) * ABS_MAX / self.rows))
             # Long enough for the firmware to report the move alone, not as
-            # one state with a press that follows, which Limine drops if it
+            # one state with a press that follows, which Initium drops if it
             # has not yet seen the button up.
             time.sleep(0.15)
             return

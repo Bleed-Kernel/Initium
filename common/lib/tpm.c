@@ -13,7 +13,7 @@
 
 // Event log records, as laid out by the TCG EFI Protocol Specification, Family
 // "2.0", Level 00 Revision 00.13. They are densely packed, and little-endian
-// like every Limine target (section 3.1).
+// like every Initium target (section 3.1).
 
 // Real logs are far smaller; a larger one is taken to be corrupt.
 #define TCG_LOG_MAX_SIZE 0x400000

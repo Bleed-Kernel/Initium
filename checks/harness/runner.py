@@ -38,7 +38,7 @@ def painter(stream):
 
 
 def build_payloads(env, jobs):
-    # The build tree's make knows the toolchain that builds Limine, and the
+    # The build tree's make knows the toolchain that builds Initium, and the
     # ports it builds. It is GNU make, which some systems call gmake.
     make = os.environ.get('MAKE') or shutil.which('gmake') or 'make'
     argv = [make, '-C', env.builddir, f'-j{jobs}', 'check-payloads']
@@ -123,21 +123,21 @@ def run_one(env, check, port, coverage, keep):
 
 
 def main(argv=None):
-    ap = argparse.ArgumentParser(description='Run the Limine checks under QEMU.')
+    ap = argparse.ArgumentParser(description='Run the Initium checks under QEMU.')
     ap.add_argument('-k', '--filter', action='append', default=[],
                     help='only checks whose name matches this glob (repeatable)')
     ap.add_argument('-p', '--port', action='append', default=[],
                     help=f'only these ports ({", ".join(PORTS)})')
     ap.add_argument('-t', '--tag', action='append', default=[], help='only checks with this tag')
     ap.add_argument('-j', '--jobs', type=int, default=max(1, min(8, (os.cpu_count() or 2) // 2)))
-    ap.add_argument('--builddir', help='Limine build directory (default: the source tree)')
+    ap.add_argument('--builddir', help='Initium build directory (default: the source tree)')
     ap.add_argument('--outdir', help='where results go (default: <builddir>/checks-results)')
     ap.add_argument('--ovmfdir', help='directory with the UEFI firmware images')
     ap.add_argument('--no-build', action='store_true', help='do not (re)build the check payloads')
     ap.add_argument('--keep', action='store_true', help='keep disk images of passing checks')
     ap.add_argument('--list', action='store_true', help='list the selected checks and exit')
     ap.add_argument('--coverage', action='store_true',
-                    help='record executed Limine code and report line coverage')
+                    help='record executed Initium code and report line coverage')
     args = ap.parse_args(argv)
 
     env = Env(args.builddir, args.outdir, args.ovmfdir)
@@ -146,7 +146,7 @@ def main(argv=None):
     # Unless asked for by name, ports the build left out are left out here.
     unbuilt = set()
     for name, port in PORTS.items():
-        if not args.port and not os.path.exists(env.bin(port.efi_name if port.is_uefi else 'limine-bios.sys')):
+        if not args.port and not os.path.exists(env.bin(port.efi_name if port.is_uefi else 'initium-bios.sys')):
             unbuilt.add(name)
     for c in checks:
         if args.filter and not any(fnmatch.fnmatch(c.full_name, f) or f in c.full_name
@@ -183,7 +183,7 @@ def main(argv=None):
     os.environ['PYTHONPATH'] = os.pathsep.join(filter(None, (CHECKSDIR, os.environ.get('PYTHONPATH'))))
     # Logging every translated block slows emulation.
     if coverage is not None:
-        os.environ.setdefault('LIMINE_CHECK_SLOWDOWN', '3')
+        os.environ.setdefault('INITIUM_CHECK_SLOWDOWN', '3')
         os.environ['LLVM_PROFILE_FILE'] = coverage.host_profile_pattern
     if not selected:
         print('No check runs selected')

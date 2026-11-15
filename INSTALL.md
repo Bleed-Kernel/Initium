@@ -1,21 +1,21 @@
 # Build and Install Instructions
 
-> **NOTE:** This document is about building and installing Limine.
+> **NOTE:** This document is about building and installing Initium.
 > For information about deployment for usage, see [USAGE.md](USAGE.md).
 
 ## Prerequisites
 
-In order to build Limine, the following programs have to be installed:
+In order to build Initium, the following programs have to be installed:
 common UNIX tools (also known as `coreutils`),
 `GNU make`, `grep`, `sed`, `find`, `awk`, `nasm` (necessary to build the x86
-ports), `mtools` (optional, necessary to build `limine-uefi-cd.bin`).
+ports), `mtools` (optional, necessary to build `initium-uefi-cd.bin`).
 Furthermore, `gcc` or `llvm/clang` must also be installed, alongside
 the respective binutils.
 
 ## Configure
 
 If using a release tarball (recommended, see
-https://github.com/Limine-Bootloader/Limine/releases), run `./configure`
+https://github.com/Bleed-Kernel/Initium/releases), run `./configure`
 directly.
 
 If checking out from the repository, run `./bootstrap` first in order to
@@ -26,35 +26,33 @@ or later required).
 `./configure` takes arguments and environment variables; for more information
 on these, run `./configure --help`.
 
-> **NOTE:** `./configure` by default does not build any Limine port. Make sure
+> **NOTE:** `./configure` by default does not build any Initium port. Make sure
 > to read the output of `./configure --help` and enable any or all ports!
 
-Limine supports both in-tree and out-of-tree builds. Simply run the `configure`
+Initium supports both in-tree and out-of-tree builds. Simply run the `configure`
 script from the directory you wish to execute the build in. The following
 `make` commands are supposed to be run inside the build directory.
 
 ## Building
 
-To build Limine, run:
+To build Initium, run:
 ```bash
 make    # (or gmake where applicable)
 ```
 
 ## Checks
 
-Limine comes with checks that boot it under QEMU on each port the build
+Initium comes with checks that boot it under QEMU on each port the build
 enabled. QEMU runs without a window, so the checks run headless, from a text
 terminal or over SSH, and they need no root privileges.
 
 ### Check prerequisites
 
-Besides what building Limine needs, the checks need:
+Besides what building Initium needs, the checks need:
 - `python3`, or the command `PYTHON3` names when given to `configure` or
   `make check`;
-- QEMU 9.2 or later, though before 10.0 the TPM checks skip loongarch64:
-  `qemu-system-x86_64` for the BIOS, IA-32 UEFI, and x86-64 UEFI ports, and
-  `qemu-system-aarch64`, `qemu-system-riscv64`, and `qemu-system-loongarch64`
-  for the other UEFI ports;
+- QEMU 9.2 or later: `qemu-system-x86_64` for the BIOS, IA-32 UEFI, and
+  x86-64 UEFI ports;
 - `mtools` and `xorriso`, which make the disk and CD images;
 - `swtpm`, for the TPM checks; and `openssl`, for the Secure Boot keys and
   signatures;
@@ -64,7 +62,7 @@ Besides what building Limine needs, the checks need:
   `llvm-profdata`, and `llvm-cov`.
 
 The kernels and other programs the checks boot are built with the toolchain
-that builds Limine.
+that builds Initium.
 
 ### Running the checks
 
@@ -73,7 +71,7 @@ To run the checks, run:
 make check    # (or gmake where applicable)
 ```
 
-This builds Limine and the programs the checks boot, and runs every check on
+This builds Initium and the programs the checks boot, and runs every check on
 every port the build enabled, as many at a time as `make`'s `-j` option asks
 for, as in `make check -j8`, or one at a time without it. Checks that boot a
 CD or PXE image the build was not configured to make are skipped. The UEFI
@@ -90,8 +88,8 @@ Options for the check runner, which only runs through `make check`, go in
 `CHECKFLAGS`, as in `make check CHECKFLAGS='-p bios -t menu'`:
 - `-k PATTERN`: only run the checks whose name matches the glob `PATTERN`, or
   contains it.
-- `-p PORT`: only run checks on `PORT`, one of `bios`, `uefi-ia32`,
-  `uefi-x86-64`, `uefi-aarch64`, `uefi-riscv64`, and `uefi-loongarch64`.
+- `-p PORT`: only run checks on `PORT`, one of `bios`, `uefi-ia32`, and
+  `uefi-x86-64`.
 - `-t TAG`: only run the checks tagged `TAG`, such as `menu`, `linux`, or
   `tpm`.
 - `-j JOBS`: run `JOBS` checks at a time, whatever `make`'s own `-j` says.
@@ -99,13 +97,13 @@ Options for the check runner, which only runs through `make check`, go in
 - `--keep`: keep the disk images of the checks that passed too.
 - `--outdir DIR`: put the results in `DIR`.
 - `--ovmfdir DIR`: take the UEFI firmware from `DIR`.
-- `--coverage`: record which lines of Limine and of the `limine` host tool the
+- `--coverage`: record which lines of Initium and of the `initium` host tool the
   checks run, and report it in the `coverage` directory among the results.
 
 `-k`, `-p`, and `-t` can each be given more than once, and a check runs on a
 port when it matches one of the values given for each of them.
 `make check CHECKFLAGS=--help` lists every option. On a slow machine, setting
-the `LIMINE_CHECK_SLOWDOWN` environment variable to a number multiplies every
+the `INITIUM_CHECK_SLOWDOWN` environment variable to a number multiplies every
 timeout by it.
 
 To remove the check programs and results, run:
@@ -117,10 +115,10 @@ make check-clean    # (or gmake where applicable)
 
 ## Installing
 
-This step will install Limine files to `share` and `bin` directories in the
+This step will install Initium files to `share` and `bin` directories in the
 specified prefix (default is `/usr/local`, see `./configure --help`).
 
-To install Limine, run:
+To install Initium, run:
 ```bash
 make install    # (or gmake where applicable)
 ```

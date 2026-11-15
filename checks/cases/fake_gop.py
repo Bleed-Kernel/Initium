@@ -6,7 +6,7 @@ from cases._common import check_report_clean, entry, kernel_file
 from cases.chainload import probe_then_limine
 
 # Graphics output the way QEMU's display devices never offer it, through
-# GOPs the EFI probe installs over plain memory before it starts Limine: in
+# GOPs the EFI probe installs over plain memory before it starts Initium: in
 # the probe's modes (payloads/efi/efiprobe.c), 640x480 RGB 5:6:5 by bit masks,
 # 800x600 8-bit RGB, others blank-masked, blit-only, or with a pitch below
 # their width, and an EDID that prefers 800x600. Two such GOPs share their

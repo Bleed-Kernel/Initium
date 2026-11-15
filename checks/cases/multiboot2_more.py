@@ -10,8 +10,8 @@ from cases.multiboot import (MB2_MODULES, boot_mb2, check_mb2_info, h, kernel_ra
 
 # More of Multiboot 2 [spec: the Multiboot2 Specification 2.0]: kernels in
 # ELF64 files, the relocatable tag's search when its first place is taken,
-# the 64-bit SMBIOS entry point, and headers and paths Limine refuses
-# [intent: Limine's messages].
+# the 64-bit SMBIOS entry point, and headers and paths Initium refuses
+# [intent: Initium's messages].
 
 
 def header_tags(data):

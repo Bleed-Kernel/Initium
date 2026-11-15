@@ -52,12 +52,6 @@ void print_stacktrace(size_t *base_ptr) {
             "movl %%ebp, %0"
 #elif defined(__x86_64__)
             "movq %%rbp, %0"
-#elif defined(__aarch64__)
-            "mov %0, x29"
-#elif defined(__riscv)
-            "mv %0, fp;  addi %0, %0, -16"
-#elif defined(__loongarch64)
-            "move %0, $fp;  addi.d %0, %0, -16"
 #endif
             : "=r"(base_ptr)
             :: "memory"
@@ -77,11 +71,7 @@ void print_stacktrace(size_t *base_ptr) {
             print("  [%p]\n", ret_addr);
         if (!old_bp)
             break;
-#if defined(__riscv) || defined(__loongarch64)
-        base_ptr = (void *)(old_bp - 16);
-#else
         base_ptr = (void*)old_bp;
-#endif
     }
     print("End of trace. ");
 }

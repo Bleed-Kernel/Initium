@@ -329,7 +329,7 @@ class Iso:
 
 
 def bios_install(env, image, partition=None, extra=None):
-    argv = [env.bin('limine'), 'bios-install', '--quiet', image]
+    argv = [env.bin('initium'), 'bios-install', '--quiet', image]
     if partition is not None:
         argv.append(str(partition))
     argv += extra or []

@@ -1,4 +1,4 @@
-// BIOS Limine's TSC calibration, common/sys/cpu.s2.c, run on a simulated
+// BIOS Initium's TSC calibration, common/sys/cpu.s2.c, run on a simulated
 // machine where stalls, such as SMIs or a hypervisor taking the CPU away, land
 // exactly where they hurt: inside a port access once the device has answered,
 // or between accesses. Each scenario reports "K name=found wanted".

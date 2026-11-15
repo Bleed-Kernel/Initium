@@ -10,7 +10,7 @@ from cases._common import (boot_entry, boot_kernel, check_file, check_report_cle
 from cases.limine_protocol import INTERNAL_COMPRESSED, INTERNAL_REQUIRED, internal_module_files
 
 # Executables whose requests point where they must not, built by patching the
-# check executables; the messages are Limine's own [intent].
+# check executables; the messages are Initium's own [intent].
 
 OUTSIDE = 0x1000
 COMMON_MAGIC = (0xc7b1dd30df4c8b88, 0x0a82e883a194f07b)

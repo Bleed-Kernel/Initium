@@ -6,9 +6,9 @@ from harness.ports import ALL_PORTS, UEFI_PORTS
 from cases._common import entry, limine_version, screen_text
 from cases.menu import BRANDING_ARCH, KERNEL, boot_menu, booted_cmdline, nothing_booted, tree_menu
 
-# Where Limine's interface goes and how much it says: serial, graphics, quiet,
+# Where Initium's interface goes and how much it says: serial, graphics, quiet,
 # verbose, terse and serial_baudrate, as CONFIG.md describes them. [intent]
-# marks what only Limine's code says, such as the wording of its messages.
+# marks what only Initium's code says, such as the wording of its messages.
 
 DOWN = b'\x1b[B'
 
@@ -27,7 +27,7 @@ def console_serial_menu(t):
     # The comment can follow the rest onto the line.
     t.wait_serial_text(m, 'the first comment')
     text = screen_text(t.wait_serial_text(m, 'ARROWS'))
-    branding = f'Limine {limine_version(t.env)} ({BRANDING_ARCH[t.port.name]})'
+    branding = f'Initium {limine_version(t.env)} ({BRANDING_ARCH[t.port.name]})'
     t.check(branding in text, f'[intent] branding on the serial line:\n{text}')
     for line in ('First', '[-] Dir', ' |--> Inner One', ' `--> Inner Two', '[+] Collapsed', 'Last',
                  'the first comment'):
@@ -59,12 +59,12 @@ def console_graphics_no(t):
 
 
 def limine_shown(t, m):
-    """Whether any of Limine's interface is on screen, in its own terminal
+    """Whether any of Initium's interface is on screen, in its own terminal
     or, on UEFI, through the firmware's console."""
     texts = [screen_text(t.screen(m, 'poll'))]
     if t.port.is_uefi:
         texts.append(screen_text(t.firmware_screen(m, 'poll')))
-    return any('ARROWS' in text or 'Limine ' in text for text in texts)
+    return any('ARROWS' in text or 'Initium ' in text for text in texts)
 
 
 @check(ports=ALL_PORTS, tags=['console'])
@@ -77,7 +77,7 @@ def console_quiet(t):
     while 'E DONE' not in m.stream(t.kernel_channel).text() and not m.exited():
         shown = shown or limine_shown(t, m)
         time.sleep(0.3)
-    t.check(not shown, 'nothing of Limine shown while the timeout ran')
+    t.check(not shown, 'nothing of Initium shown while the timeout ran')
     t.expect_eq(booted_cmdline(t, m), 'first', 'the default entry booted when the timeout ran out')
     m.stop()
     # Pressed until it lands, as however long the firmware takes, one press
@@ -100,7 +100,7 @@ def console_quiet(t):
 
 def boot_messages(t, globals_):
     """Boot an entry with a module, serial: yes and globals_; return the text
-    Limine wrote to the serial line, and the executable's report."""
+    Initium wrote to the serial line, and the executable's report."""
     config = 'timeout: 0\nserial: yes\n' + globals_ + entry(
         'Test', path=KERNEL, cmdline='messages', modules=[('boot():/boot/mod1.bin', 'one')])
     m = boot_menu(t, config, files={'/boot/mod1.bin': b'module contents\n'})
@@ -137,7 +137,7 @@ def console_message_levels(t):
     for line in LOADING:
         t.check(line in text, f'verbose: {line!r} still printed')
     text, report = boot_messages(t, 'quiet: yes\n')
-    t.check('limine' not in text.lower(), f'[intent] quiet: nothing printed to the serial line:\n{text}')
+    t.check('initium' not in text.lower(), f'[intent] quiet: nothing printed to the serial line:\n{text}')
     t.expect_eq(report['cmdline'], 'messages', 'quiet: booted')
 
 
@@ -182,14 +182,7 @@ def esc(seq):
     return b'\x1b' + seq
 
 
-# On UEFI the firmware's terminal decodes the serial line, passing on as
-# characters what it does not know. The RISC-V and LoongArch edk2 firmware
-# instead drops the digits of the numbered keys it does not know, leaving
-# ESC [ ~ for VT220's 1, 4, 7 and 8 among them.
-DIGIT_DROPPING_PORTS = ['uefi-riscv64', 'uefi-loongarch64']
-
-
-@check(ports=[p for p in ALL_PORTS if p not in DIGIT_DROPPING_PORTS], tags=['console', 'serial'])
+@check(ports=ALL_PORTS, tags=['console', 'serial'])
 def console_serial_escape_sequences(t):
     """Keys typed on the serial line as the escape sequences terminals send
     (ECMA-48 5th edition control sequences, VT220's numbered ~ keys, xterm's
@@ -214,7 +207,7 @@ def console_serial_escape_sequences(t):
     t.expect_eq(booted_cmdline(t, m), 'cdefXYZ', 'the edited entry booted')
 
 
-@check(ports=[p for p in UEFI_PORTS if p not in DIGIT_DROPPING_PORTS], tags=['console', 'serial'])
+@check(ports=UEFI_PORTS, tags=['console', 'serial'])
 def console_serial_split_sequences(t):
     """[intent] A key's escape sequence whose bytes come apart, as the
     firmware's console can pass them on over several of its polls of the
@@ -232,23 +225,3 @@ def console_serial_split_sequences(t):
         time.sleep(0.3)
     t.expect_eq(booted_cmdline(t, m), 'abcdefX', 'the edited entry booted')
 
-
-@check(ports=DIGIT_DROPPING_PORTS, tags=['console', 'serial'])
-def console_serial_decoded_keys(t):
-    """Keys that firmware's terminal decodes work in the editor: Home and End
-    as control sequence (ECMA-48 5th edition) and SS3 finals, Backspace sent
-    as DEL, PgUp and PgDn, and F10 to boot."""
-    m = boot_menu(t, 'timeout: no\nserial: yes\n/Only\n    protocol: limine\n    cmdline: abcdef\n'
-                  f'    path: {KERNEL}\n')
-    t.wait_serial_text(m, 'ARROWS')
-    type_serial(m, b'e')
-    t.wait_serial_text(m, 'cmdline: abcdef')
-    type_serial(m, esc(b'[B'),                                 # onto the cmdline line
-                esc(b'[F'), b'X',                              # End: abcdefX
-                esc(b'[H'), *[esc(b'[C')] * 11,               # Home, then past the b
-                b'\x7f', b'\x7f',                              # Backspace twice: cdefX
-                esc(b'OF'), b'Y',                              # SS3 End: cdefXY
-                esc(b'OH'), esc(b'[F'), b'Z',                  # SS3 Home, End: cdefXYZ
-                esc(b'[5~'), esc(b'[6~'),                      # PgUp, PgDn: nowhere to go
-                esc(b'[21~'))                                  # F10
-    t.expect_eq(booted_cmdline(t, m), 'cdefXYZ', 'the edited entry booted')

@@ -352,48 +352,6 @@ void *get_device_tree_blob(const char *config, size_t extra_size,
 
 #if defined(UEFI)
 
-#if defined(__riscv)
-
-struct efi_riscv_efi_boot_protocol *get_riscv_boot_protocol(void) {
-    struct efi_guid boot_proto_guid = EFI_RISCV_EFI_BOOT_PROTOCOL_GUID;
-    struct efi_riscv_efi_boot_protocol *proto;
-
-    // LocateProtocol() is available from EFI version 1.1
-    if (gBS->hdr.revision >= ((1 << 16) | 10)) {
-        if (gBS->locate_protocol(&boot_proto_guid, NULL, (void **)&proto) == EFI_SUCCESS) {
-            return proto;
-        }
-    }
-
-    size_t bufsz = 0;
-    if (gBS->locate_handle(EFI_BY_PROTOCOL, &boot_proto_guid, NULL, &bufsz, NULL) != EFI_BUFFER_TOO_SMALL) {
-        return NULL;
-    }
-
-    size_t handles_alloc = bufsz;
-    efi_handle *handles_buf = ext_mem_alloc(handles_alloc);
-    if (handles_buf == NULL)
-        return NULL;
-
-    if (bufsz < sizeof(efi_handle))
-        goto error;
-
-    if (gBS->locate_handle(EFI_BY_PROTOCOL, &boot_proto_guid, NULL, &bufsz, handles_buf) != EFI_SUCCESS) {
-        goto error;
-    }
-
-    if (gBS->handle_protocol(handles_buf[0], &boot_proto_guid, (void **)&proto) != EFI_SUCCESS)
-        goto error;
-
-    pmm_free(handles_buf, handles_alloc);
-    return proto;
-
-error:
-    pmm_free(handles_buf, handles_alloc);
-    return NULL;
-}
-
-#endif
 
 no_unwind bool efi_boot_services_exited = false;
 
@@ -492,17 +450,7 @@ bool efi_leave_boot_services(void) {
 
     const size_t EFI_COPY_MAX_ENTRIES = efi_copy_alloc / efi_desc_size;
 
-#if defined(__x86_64__) || defined(__i386__)
     asm volatile ("cli" ::: "memory");
-#elif defined(__aarch64__)
-    asm volatile ("msr daifset, #15" ::: "memory");
-#elif defined(__riscv)
-    asm volatile ("csrci sstatus, 0x2" ::: "memory");
-#elif defined(__loongarch64)
-    asm volatile ("csrxchg $r0, %0, 0x0" :: "r" (0x4) : "memory");
-#else
-#error Unknown architecture
-#endif
 
     // Go through new EFI memmap and free up bootloader entries
     size_t entry_count = efi_mmap_size / efi_desc_size;

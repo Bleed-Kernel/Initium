@@ -5,7 +5,7 @@ from harness.media import HostFile
 from harness.ports import UEFI_PORTS
 from cases._common import check_report_clean, entry, kernel_file
 
-# How UEFI Limine takes the firmware's memory map.
+# How UEFI Initium takes the firmware's memory map.
 
 
 def memmap_types(r, base, size):

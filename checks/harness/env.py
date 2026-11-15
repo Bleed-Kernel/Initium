@@ -19,7 +19,7 @@ class Env:
         self.host_tool = None
 
     def bin(self, name):
-        if name == 'limine' and self.host_tool is not None:
+        if name == 'initium' and self.host_tool is not None:
             return self.host_tool
         return os.path.join(self.bindir, name)
 
@@ -34,9 +34,6 @@ class Env:
             'bios': 'common-bios',
             'uefi-ia32': 'common-uefi-ia32',
             'uefi-x86-64': 'common-uefi-x86-64',
-            'uefi-aarch64': 'common-uefi-aarch64',
-            'uefi-riscv64': 'common-uefi-riscv64',
-            'uefi-loongarch64': 'common-uefi-loongarch64',
         }[port]
         return os.path.join(self.builddir, sub, 'limine.elf')
 

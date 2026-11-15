@@ -8,15 +8,13 @@ from harness.report import unescape
 from cases._common import countdown_start, countdown_stopped, kernel_file, limine_version, screen_text
 
 # The boot menu, seen on screen and driven from the keyboard. Expectations
-# come from CONFIG.md; [intent] marks what only Limine's code says, such as
+# come from CONFIG.md; [intent] marks what only Initium's code says, such as
 # its default branding and help text.
 
 KERNEL = 'boot():/boot/kernel.elf'
-# The vendor of the variables Limine keeps across boots.
+# The vendor of the variables Initium keeps across boots.
 LIMINE_VENDOR = '03884334-1756-4978-9c8c-86fb8998b4ea'
-BRANDING_ARCH = {'bios': 'x86-64, BIOS', 'uefi-ia32': 'x86-64, UEFI32', 'uefi-x86-64': 'x86-64, UEFI',
-                 'uefi-aarch64': 'aarch64, UEFI', 'uefi-riscv64': 'riscv64, UEFI',
-                 'uefi-loongarch64': 'loongarch64, UEFI'}
+BRANDING_ARCH = {'bios': 'x86-64, BIOS', 'uefi-ia32': 'x86-64, UEFI32', 'uefi-x86-64': 'x86-64, UEFI'}
 
 
 def menu_entry(level, title, cmdline=None, comment=None):
@@ -77,7 +75,7 @@ def menu_layout(t):
     m = boot_menu(t, tree_menu())
     scr = wait_menu(t, m)
     text = screen_text(scr)
-    branding = f'Limine {limine_version(t.env)} ({BRANDING_ARCH[t.port.name]})'
+    branding = f'Initium {limine_version(t.env)} ({BRANDING_ARCH[t.port.name]})'
     _, brand_row = scr.find_one(branding)
     _, help_row = scr.find_one('ARROWS Select    ENTER Boot    E Edit')
     t.check(brand_row < help_row, '[intent] default branding at the top, above the key help')
@@ -169,7 +167,7 @@ def menu_interface_options(t):
     scr = wait_menu(t, m)
     x, y = scr.find_one('ARROWS')
     t.expect_eq(scr.cell(x, y).fg, 0x00aa00, 'default help colour 00aa00')
-    x, y = scr.find_one('Limine ')
+    x, y = scr.find_one('Initium ')
     t.expect_eq(scr.cell(x, y).fg, 0x00aaaa, 'default branding colour 00aaaa')
     m.stop()
     m = boot_menu(t, 'timeout: no\ninterface_help_hidden: yes\n' + menu_entry(1, 'Only', 'only'))
@@ -282,8 +280,8 @@ def menu_remember_last_entry(t):
     t.expect_eq(booted_cmdline(t, m), 'last', 'Last chosen')
     m.stop()
     stored = efivars.read(m.workdir + '/vars.fd')
-    t.check(('LimineLastBootedEntry', LIMINE_VENDOR) in stored,
-            f'[intent] remembered under Limine\'s vendor GUID: {sorted(n for n, _ in stored)}')
+    t.check(('InitiumLastBootedEntry', LIMINE_VENDOR) in stored,
+            f'[intent] remembered under Initium\'s vendor GUID: {sorted(n for n, _ in stored)}')
     m = t.boot(disk, vars_file=m.workdir + '/vars.fd')
     t.expect_eq(booted_cmdline(t, m), 'last', '[spec] Last selected and booted when the timeout ran out')
 

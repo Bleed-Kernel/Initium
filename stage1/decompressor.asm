@@ -540,7 +540,7 @@ finish:
     push OUTPUT
     ret
 
-errmsg: db "limine integrity error"
+errmsg: db "initium integrity error"
 .len: equ $ - errmsg
 
 ; A nibble table keeps the CRC pass from dominating long match copies.

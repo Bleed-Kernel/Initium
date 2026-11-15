@@ -6,7 +6,7 @@ from harness.media import BASIC_DATA_TYPE, Disk, Fat, HostFile, Part, Tree
 from harness.ports import ALL_PORTS, Drive
 from cases._common import check_file, check_report_clean, entry, kernel_file, wait_panic
 
-# Partition tables Limine has to work harder for: a GPT to be recovered from
+# Partition tables Initium has to work harder for: a GPT to be recovered from
 # its backup (UEFI 2.11 5.3.2), a GPT header longer than the 92 bytes it
 # defines, and chains of extended boot records that loop, run on, or point
 # outside their partition. Each sits on a data disk next to the boot disk,

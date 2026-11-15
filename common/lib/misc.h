@@ -128,26 +128,7 @@ typedef char symbol[];
 
 noreturn void stage3_common(void);
 
-#if defined(__x86_64__) || defined(__i386__)
 noreturn void common_spinup(void *fnptr, int args, ...);
-#elif defined(__aarch64__)
-noreturn void enter_in_el1(uint64_t entry, uint64_t sp, uint64_t sctlr,
-                           uint64_t mair, uint64_t tcr, uint64_t ttbr0,
-                           uint64_t ttbr1, uint64_t target_x0);
-noreturn void enter_in_el2(uint64_t entry, uint64_t sp, uint64_t sctlr,
-                           uint64_t mair, uint64_t tcr, uint64_t ttbr0,
-                           uint64_t ttbr1, uint64_t target_x0);
-#elif defined(__riscv)
-noreturn void riscv_spinup(uint64_t entry, uint64_t sp, uint64_t satp, uint64_t direct_map_offset);
-#if defined(UEFI)
-struct efi_riscv_efi_boot_protocol *get_riscv_boot_protocol(void);
-#endif
-#elif defined(__loongarch64)
-noreturn void loongarch_spinup(uint64_t entry, uint64_t sp, uint64_t pgdl,
-                               uint64_t pgdh, uint64_t direct_map_offset);
-#else
-#error Unknown architecture
-#endif
 
 #if defined(UEFI) && defined(__x86_64__)
 void prepare_spinup_tramp(void);

@@ -63,7 +63,7 @@ struct blake2b_param {
     uint8_t personal[BLAKE2B_PERSONAL_BYTES];
 } __attribute__((packed));
 
-// Safe unaligned load/store helpers for architectures with strict alignment (ARM64, RISC-V)
+// Safe unaligned load/store helpers
 static inline uint64_t load64_le(const void *src) {
     uint64_t val;
     memcpy(&val, src, sizeof(val));

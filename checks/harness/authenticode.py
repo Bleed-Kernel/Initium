@@ -2,7 +2,7 @@
 around it, and the attribute certificate table it goes in, as Microsoft's
 "Windows Authenticode Portable Executable Signature Format", Version 1.0,
 lays them out. openssl only makes the RSA signature, so any machine type can
-be signed, which sbsign refuses for some (LoongArch among them)."""
+be signed, which sbsign refuses for some."""
 
 import hashlib
 import struct

@@ -26,7 +26,7 @@ def full_conformance(t):
     t.expect_eq(report['base_revision.supported'], '1', 'base revision 6 supported')
     t.expect_eq(report.int('base_revision.loaded'), 6, 'loaded base revision')
 
-    t.expect_eq(unescape(report['bootloader_info.name']), 'Limine', 'bootloader name')
+    t.expect_eq(unescape(report['bootloader_info.name']), 'Initium', 'bootloader name')
     t.expect_eq(unescape(report['bootloader_info.version']), limine_version(t.env), 'bootloader version')
     t.expect_eq(unescape(report['cmdline']), 'hello world', 'command line')
     t.expect_eq(report.int('firmware_type'), firmware_type(t.port), 'firmware type')
@@ -46,13 +46,8 @@ def full_conformance(t):
     t.expect_eq(report.flag('efi_system_table.response'), uefi, 'EFI system table response')
     t.expect_eq(report.flag('efi_memmap.response'), uefi, 'EFI memory map response')
     t.expect_eq(report.flag('keep_iommu.response'), t.port.is_x86, 'keep IOMMU response (x86 only)')
-    if t.port.arch == 'riscv64':
-        t.expect_eq(report.flag('riscv_bsp_hartid.response'), True, 'RISC-V BSP hart ID response')
-        t.expect_eq(report.int('riscv_bsp_hartid'), report.int('mp.bsp_id', 16), 'BSP hart ID agrees with MP')
-    # Firmware publishes a device tree on some platforms only (dtb_path checks
-    # cover the response); none exists on x86.
-    if t.port.is_x86:
-        t.expect_eq(report.flag('dtb.response'), False, 'no device tree response on x86')
+    # No firmware device tree on x86 (dtb_path checks cover the response).
+    t.expect_eq(report.flag('dtb.response'), False, 'no device tree response on x86')
     t.expect_eq(report.flag('rsdp.response'), True, 'RSDP response')
     t.expect_eq(report.flag('smbios.response'), True, 'SMBIOS response')
     t.expect_eq(report.flag('framebuffer.response'), True, 'framebuffer response')
@@ -62,10 +57,6 @@ def full_conformance(t):
     t.expect_eq(report.int('entropy.count'), 16, 'entropy values')
     t.expect_eq(report.int('framebuffer.revision'), 2, 'framebuffer response revision')
     t.expect_eq(report.int('framebuffer.0.upright_rotation'), 0, 'no turn known for QEMU\'s display')
-
-    if t.port.arch == 'riscv64' and 'riscv64.timebase_frequency' in report:
-        t.expect_eq(report.int('tsc_frequency'), report.int('riscv64.timebase_frequency'),
-                    'timer frequency against the device tree')
 
     # Without a wallpaper or theme options the terminal parameters are defaults.
     t.expect_eq(report['flanterm.0.canvas'], '0', 'no canvas without a wallpaper')
@@ -77,9 +68,7 @@ def full_conformance(t):
     t.expect_eq(report['flanterm.0.font_hash'], fnv1a(builtin_font()), 'builtin font data')
 
 
-# QEMU's RISC-V virt firmware keeps time with a virtual clock that ignores the
-# RTC, so the firmware's GetTime is what Limine must agree with there.
-@check(ports=[p for p in ALL_PORTS if p != 'uefi-riscv64'], tags=['limine-protocol'])
+@check(ports=ALL_PORTS, tags=['limine-protocol'])
 def date_at_boot(t):
     """The Date at Boot feature reports the RTC as a UNIX timestamp."""
     base = calendar.timegm((2001, 2, 3, 4, 5, 6))
@@ -93,16 +82,8 @@ def date_at_boot(t):
 def base_revisions(t):
     """Each base revision is honoured, the tag answered, and what the revision
     governs (HHDM extent, identity map, table addresses, memory map types)
-    holds; the executable checks the details. aarch64 supports 6 alone."""
+    holds; the executable checks the details."""
     for rev in range(6):
-        if t.port.arch == 'aarch64':
-            m, _ = boot_entry(t, 'timeout: 0\n' + entry('Test', path='boot():/boot/kernel.elf'),
-                              kernel_variant=f'rev{rev}')
-            msg, _ = wait_panic(t, m)
-            t.expect_eq(msg, f'limine: Base revision {rev} is no longer supported for aarch64 (minimum: 6)',
-                        f'panic for base revision {rev}')
-            m.stop()
-            continue
         report, m, _ = boot_kernel(t, f'rev{rev}', smp=2)
         check_report_clean(t, report)
         t.expect_eq(report.flag('base_revision.supported'), True, f'rev{rev}: supported')
@@ -124,23 +105,13 @@ def base_revision_unsupported(t):
     t.expect_eq(report.flag('identity_map'), False, 'no identity map (revision 6 semantics)')
 
 
-@check(ports=[p for p in ALL_PORTS if p != 'uefi-aarch64'], tags=['limine-protocol'])
+@check(ports=ALL_PORTS, tags=['limine-protocol'])
 def base_revision_absent(t):
     """No base revision tag means base revision 0."""
     report, m, _ = boot_kernel(t, 'norev')
     check_report_clean(t, report)
     t.expect_eq(report.int('base_revision.effective'), 0, 'treated as revision 0')
     t.expect_eq(report.flag('identity_map'), True, 'identity map present')
-
-
-@check(ports=['uefi-aarch64'], tags=['limine-protocol'])
-def base_revision_absent_aarch64(t):
-    """Without a tag the executable asks for revision 0, refused on aarch64."""
-    m, _ = boot_entry(t, 'timeout: 0\n' + entry('Test', path='boot():/boot/kernel.elf'),
-                      kernel_variant='norev')
-    msg, _ = wait_panic(t, m)
-    t.expect_eq(msg, 'limine: Base revision 0 is no longer supported for aarch64 (minimum: 6)',
-                'panic message')
 
 
 def boot_variant(t, variant, extra_entry='', cmdline='x', modules=(), smp=1, cpu=None, machine=None,
@@ -226,8 +197,6 @@ def x2apic(t):
 # highest, and the protocol's number for that highest mode.
 PAGING = {
     'x86-64': ('qemu64,+la57', 'qemu64,-la57', 1, '5level', '4level'),
-    'aarch64': ('max', 'cortex-a72', 1, '5level', '4level'),
-    'riscv64': ('rv64,sv57=on', 'rv64,sv57=off', 2, 'sv57', 'sv48'),
 }
 
 
@@ -236,12 +205,12 @@ def paging_cpu(t, top):
     return full if top else limited
 
 
-@check(ports=[p for p in ALL_PORTS if p != 'uefi-loongarch64'], tags=['limine-protocol', 'paging'])
+@check(ports=ALL_PORTS, tags=['limine-protocol', 'paging'])
 def paging_mode_requests(t):
     """The paging mode request picks the mode within what the executable and
     the CPU allow, and refuses to boot when the two do not meet."""
     full, limited, top, top_name, below_name = PAGING[t.port.arch]
-    hhdm_5 = {'x86-64': 0xff00000000000000, 'aarch64': 0xfff0000000000000}
+    hhdm_5 = {'x86-64': 0xff00000000000000}
 
     m, _ = boot_variant(t, 'pagingtop', cpu=full)
     r = expect_report(t, m, 'top mode on a capable CPU')
@@ -251,7 +220,7 @@ def paging_mode_requests(t):
 
     m, _ = boot_variant(t, 'pagingtop', cpu=limited)
     r = expect_report(t, m, 'top mode on a CPU without it')
-    t.expect_eq(r.int('paging_mode'), top - 1 if t.port.arch == 'riscv64' else 0, 'falls back')
+    t.expect_eq(r.int('paging_mode'), 0, 'falls back')
     m.stop()
 
     m, _ = boot_variant(t, 'pagingrev0top', cpu=full)
@@ -270,8 +239,7 @@ def paging_mode_requests(t):
 
     m, _ = boot_variant(t, 'nopaging', cpu=full)
     r = expect_report(t, m, 'no paging mode request')
-    default = 1 if t.port.arch == 'riscv64' else 0
-    t.expect_eq(r.int('paging_mode.hardware'), default, 'default mode without a request')
+    t.expect_eq(r.int('paging_mode.hardware'), 0, 'default mode without a request')
     t.expect_eq('paging_mode' in r, False, 'no paging mode response')
     m.stop()
 
@@ -285,12 +253,6 @@ def paging_mode_requests(t):
     t.expect_eq(r.int('paging_mode'), top, "the executable's minimum raises the mode")
     m.stop()
 
-    if t.port.arch == 'riscv64':
-        m, _ = boot_variant(t, 'nopaging', cpu='rv64,sv48=off,sv57=off')
-        r = expect_report(t, m, 'no request, a CPU with Sv39 alone')
-        t.expect_eq(r.int('paging_mode.hardware'), 0, 'the default, Sv48, lowered to Sv39')
-        m.stop()
-
     if t.port.arch in hhdm_5:
         m, _ = boot_variant(t, 'pagingtop', cpu=full)
         r = expect_report(t, m, 'top mode HHDM')
@@ -299,7 +261,7 @@ def paging_mode_requests(t):
         m.stop()
 
 
-@check(ports=[p for p in ALL_PORTS if p != 'uefi-loongarch64'], tags=['limine-protocol', 'paging'])
+@check(ports=ALL_PORTS, tags=['limine-protocol', 'paging'])
 def paging_mode_config(t):
     """paging_mode, max_paging_mode and min_paging_mode bound the choice."""
     full, limited, top, top_name, below_name = PAGING[t.port.arch]
@@ -343,17 +305,6 @@ def paging_mode_config(t):
     m, _ = boot_variant(t, 'full', cpu=full, extra_entry='min_paging_mode: bogus')
     expect_panic(t, m, 'limine: Invalid MIN_PAGING_MODE: `bogus`', 'unknown min_paging_mode')
     m.stop()
-
-
-@check(ports=['uefi-loongarch64'], tags=['limine-protocol', 'paging'])
-def paging_mode_loongarch(t):
-    """loongarch64 has 4-level paging alone; the option accepts only that."""
-    m, _ = boot_variant(t, 'full', extra_entry='paging_mode: 4level')
-    r = expect_report(t, m, '4level')
-    t.expect_eq(r.int('paging_mode'), 0, 'mode')
-    m.stop()
-    m, _ = boot_variant(t, 'full', extra_entry='paging_mode: 5level')
-    expect_panic(t, m, 'limine: Invalid MAX_PAGING_MODE: `5level`', '5level refused')
 
 
 @check(ports=ALL_PORTS, tags=['limine-protocol'])
@@ -418,7 +369,7 @@ VTD_ON = (1 << 31) | (1 << 26)
 
 @check(ports=['uefi-ia32', 'uefi-x86-64'], tags=['limine-protocol', 'iommu'])
 def iommu_off_at_entry(t):
-    """An IOMMU the firmware left on, here the EFI probe that starts Limine,
+    """An IOMMU the firmware left on, here the EFI probe that starts Initium,
     is off at entry from base revision 5, unless the executable asks for the
     x86-64 Keep IOMMU feature [spec]: Intel VT-d DMA remapping, and the
     queued invalidation the probe also turns on [intent]; AMD-Vi, its command
@@ -556,24 +507,6 @@ def internal_modules_need_rev1(t):
     check_file(t, report, 'module.00', path='/boot/conf.bin', data=CONFIG_MODULE, string='config module', disk=disk)
 
 
-@check(ports=['uefi-aarch64'], tags=['limine-protocol'])
-def aarch64_entry_el(t):
-    """With the firmware, and so Limine, at EL2, the executable is entered at
-    EL2 with VHE where the CPU has it, and at EL1 otherwise, never at EL2
-    without it (PROTOCOL.md); the APs, started over PSCI by SMC from the
-    ACPI tables or the device tree, at the BSP's EL (the payload checks)."""
-    for cpu, want, opts in (('cortex-a72', 1, []), ('max', 2, []), ('cortex-a72', 1, ['acpi=off']),
-                            ('max', 2, ['acpi=off'])):
-        report, m, _ = boot_kernel(t, smp=4, machine_kwargs={'cpu': cpu,
-                                                            'machine_opts': ['virtualization=on'] + opts})
-        check_report_clean(t, report)
-        vhe = report.int('aarch64.vhe') != 0
-        what = f'{cpu}{" without ACPI" if opts else ""}'
-        t.expect_eq((report.int('aarch64.el'), vhe), (want, want == 2), f'[spec] {what}: EL, VHE')
-        t.expect_eq(report.int('mp.aps_started'), 3, f'{what}: APs started')
-        m.stop()
-
-
 @check(ports=ALL_PORTS, tags=['limine-protocol'])
 def randomise_memory(t):
     """randomise_memory: yes, or its alias randomize_memory, fills RAM with
@@ -605,14 +538,3 @@ def x86_1gib_pages(t):
     executable checks holds the same [intent]."""
     m, _ = boot_variant(t, 'full', cpu='qemu64,+pdpe1gb')
     expect_report(t, m, '1GiB pages')
-
-
-@check(ports=['uefi-riscv64'], tags=['limine-protocol', 'paging'])
-def riscv_svpbmt(t):
-    """[spec] With Svpbmt, mappings take the page-based memory types the
-    protocol asks of them, framebuffers NC (PROTOCOL.md), which the
-    executable checks entry by entry; it learns of Svpbmt from the device
-    tree, which only firmware without ACPI hands on."""
-    m, _ = boot_variant(t, 'full', cpu='rv64,svpbmt=on', machine=('acpi=off',))
-    r = expect_report(t, m, 'Svpbmt')
-    t.expect_eq(r.int('riscv64.svpbmt'), 1, 'the executable found Svpbmt')

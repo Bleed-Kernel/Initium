@@ -8,10 +8,10 @@ from cases._common import boot_entry, entry, panics_in_turn, read, select_entry,
 from cases.multiboot import (boot_mb1, boot_mb2, mb1_kernel, mb1_report, mb2_kernel, mb2_report)
 
 # Spoilt ELF kernels for Multiboot 1 and 2, each failing one check of
-# Limine's loader and no other first, in an ELF32 file and in the ELF64
-# container Limine also takes; the messages are Limine's own [intent].
+# Initium's loader and no other first, in an ELF32 file and in the ELF64
+# container Initium also takes; the messages are Initium's own [intent].
 
-RISCV = 0xf3
+OTHER_MACHINE = 0xf3  # any machine but x86
 
 
 def hostile_images(e, proto):
@@ -48,10 +48,10 @@ def hostile_images(e, proto):
          f'{proto}: ELF section entry size too small'),
     ]
     if bits32:
-        cases.append(('another machine', e.patched(e_machine=RISCV), 'elf: Not an IA-32 ELF file.'))
+        cases.append(('another machine', e.patched(e_machine=OTHER_MACHINE), 'elf: Not an IA-32 ELF file.'))
     else:
         cases += [
-            ('another machine', e.patched(e_machine=RISCV), 'elf: Not an x86-64 ELF file.'),
+            ('another machine', e.patched(e_machine=OTHER_MACHINE), 'elf: Not an x86-64 ELF file.'),
             ('segment end overflow', e.patched(**{f'p_paddr{last}': 0xfffffffffffff000}),
              'elf: p_paddr + p_memsz overflow'),
             ('segment offset overflow', e.patched(**{f'p_offset{first}': (1 << 64) - 4}),

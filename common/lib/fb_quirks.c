@@ -500,7 +500,7 @@ void fb_quirks_apply(struct fb_info *fbs, size_t fbs_count) {
 #endif
 
     // The first framebuffer alone, the one the Linux protocol hands Linux, so
-    // that Limine goes by these tables exactly where Linux does.
+    // that Initium goes by these tables exactly where Linux does.
     struct fb_info *fb = &fbs[0];
 
     // Base 0 is no framebuffer for the geometry to fill in.

@@ -39,55 +39,6 @@
 #define ST_LDTR 39
 #define ST_RET 40
 #define ST_COUNT 48
-#elif defined(__aarch64__)
-#define ST_X0 0
-#define ST_X30 30
-#define ST_SP 31
-#define ST_CURRENTEL 32
-#define ST_DAIF 33
-#define ST_NZCV 34
-#define ST_SPSEL 35
-#define ST_SCTLR 36
-#define ST_TCR 37
-#define ST_MAIR 38
-#define ST_TTBR0 39
-#define ST_TTBR1 40
-#define ST_CPACR 41
-#define ST_VBAR 42
-#define ST_HCR_EL2 43
-#define ST_CPTR_EL2 44
-#define ST_CNTHCTL_EL2 45
-#define ST_HSTR_EL2 46
-#define ST_COUNT 48
-#elif defined(__riscv)
-#define ST_X0 0
-#define ST_SSTATUS 32
-#define ST_SIE 33
-#define ST_STVEC 34
-#define ST_SATP 35
-#define ST_SIP 36
-#define ST_COUNT 40
-#elif defined(__loongarch64)
-#define ST_R0 0
-#define ST_CRMD 32
-#define ST_PRMD 33
-#define ST_EUEN 34
-#define ST_ECFG 35
-#define ST_EENTRY 36
-#define ST_MERRENTRY 37
-#define ST_TLBRENTRY 38
-#define ST_PGDL 39
-#define ST_PGDH 40
-#define ST_PWCL 41
-#define ST_PWCH 42
-#define ST_STLBPS 43
-#define ST_DMW0 44
-#define ST_DMW1 45
-#define ST_DMW2 46
-#define ST_DMW3 47
-#define ST_CPUID 48
-#define ST_MISC 49
-#define ST_COUNT 52
 #endif
 
 #define MAX_APS 32

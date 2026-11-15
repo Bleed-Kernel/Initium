@@ -83,7 +83,7 @@ struct limine_internal_module internal_module2 = {
 };
 
 struct limine_internal_module internal_module3 = {
-    .path = "./limine.conf",
+    .path = "./initium.conf",
     .string = "Third internal module"
     /*  gzip test depends on this name to find
         the original to compare against.  */
@@ -91,8 +91,8 @@ struct limine_internal_module internal_module3 = {
 
 #ifdef ENABLE_GZIP_TEST
 struct limine_internal_module internal_module4 = {
-    .path = "./limine.conf.gz",
-    .string = "gzip-compressed limine.conf",
+    .path = "./initium.conf.gz",
+    .string = "gzip-compressed initium.conf",
     .flags = LIMINE_INTERNAL_MODULE_COMPRESSED
 };
 #endif
@@ -177,28 +177,9 @@ static volatile struct limine_paging_mode_request _pm_request = {
     .mode = LIMINE_PAGING_MODE_X86_64_5LVL,
     .max_mode = LIMINE_PAGING_MODE_X86_64_5LVL,
     .min_mode = LIMINE_PAGING_MODE_X86_64_MIN
-#elif defined(__aarch64__)
-    .mode = LIMINE_PAGING_MODE_AARCH64_5LVL,
-    .max_mode = LIMINE_PAGING_MODE_AARCH64_5LVL,
-    .min_mode = LIMINE_PAGING_MODE_AARCH64_MIN
-#elif defined(__riscv)
-    .mode = LIMINE_PAGING_MODE_RISCV_SV57,
-    .max_mode = LIMINE_PAGING_MODE_RISCV_SV57,
-    .min_mode = LIMINE_PAGING_MODE_RISCV_MIN,
-#elif defined(__loongarch__)
-    .mode = LIMINE_PAGING_MODE_LOONGARCH_DEFAULT,
-    .max_mode = LIMINE_PAGING_MODE_LOONGARCH_DEFAULT,
-    .min_mode = LIMINE_PAGING_MODE_LOONGARCH_MIN
 #endif
 };
 
-#ifdef __riscv
-__attribute__((section(".limine_requests")))
-static volatile struct limine_riscv_bsp_hartid_request _bsp_request = {
-    .id = LIMINE_RISCV_BSP_HARTID_REQUEST_ID,
-    .revision = 0, .response = NULL,
-};
-#endif
 
 __attribute__((section(".limine_requests")))
 static volatile struct limine_tsc_frequency_request tsc_freq_request = {
@@ -306,12 +287,6 @@ void ap_entry(struct limine_mp_info *info) {
 
 #if defined(__x86_64__)
     printf("My LAPIC ID: %#x\n", info->lapic_id);
-#elif defined(__aarch64__)
-    printf("My MPIDR: %#lx\n", info->mpidr);
-#elif defined(__riscv)
-    printf("My Hart ID: %#lx\n", info->hartid);
-#elif defined(__loongarch__)
-    printf("My Phys ID: %#lx\n", info->phys_id);
 #endif
 
     __atomic_fetch_add(&ctr, 1, __ATOMIC_SEQ_CST);
@@ -353,7 +328,7 @@ static void limine_main(void) {
     }
 
     if (LIMINE_BASE_REVISION_SUPPORTED(limine_base_revision) == false) {
-        printf("Limine base revision not supported\n");
+        printf("Initium base revision not supported\n");
         for (;;);
     }
 
@@ -572,8 +547,8 @@ FEAT_START
     }
 
 #ifdef ENABLE_GZIP_TEST
-    /*  Gzip decompression test: compare internal_module3 (plain limine.conf)
-        against internal_module4 (limine.conf.gz, decompressed by bootloader).  */
+    /*  Gzip decompression test: compare internal_module3 (plain initium.conf)
+        against internal_module4 (initium.conf.gz, decompressed by bootloader).  */
     {
         struct limine_file *plain = NULL, *decompressed = NULL;
         for (size_t i = 0; i < module_response->module_count; i++) {
@@ -688,12 +663,6 @@ FEAT_START
     printf("Flags: %#lx\n", (unsigned long)mp_response->flags);
 #if defined(__x86_64__)
     printf("BSP LAPIC ID: %#x\n", mp_response->bsp_lapic_id);
-#elif defined(__aarch64__)
-    printf("BSP MPIDR: %#lx\n", mp_response->bsp_mpidr);
-#elif defined(__riscv)
-    printf("BSP Hart ID: %#lx\n", mp_response->bsp_hartid);
-#elif defined(__loongarch__)
-    printf("BSP Phys ID: %#lx\n", mp_response->bsp_phys_id);
 #endif
     printf("CPU count: %lu\n", mp_response->cpu_count);
     for (size_t i = 0; i < mp_response->cpu_count; i++) {
@@ -701,23 +670,11 @@ FEAT_START
         printf("Processor ID: %#lx\n", (unsigned long)cpu->processor_id);
 #if defined(__x86_64__)
         printf("LAPIC ID: %#x\n", cpu->lapic_id);
-#elif defined(__aarch64__)
-        printf("MPIDR: %#lx\n", cpu->mpidr);
-#elif defined(__riscv)
-        printf("Hart ID: %#lx\n", cpu->hartid);
-#elif defined(__loongarch__)
-        printf("Phys ID: %#lx\n", cpu->phys_id);
 #endif
 
 
 #if defined(__x86_64__)
         if (cpu->lapic_id != mp_response->bsp_lapic_id) {
-#elif defined(__aarch64__)
-        if (cpu->mpidr != mp_response->bsp_mpidr) {
-#elif defined(__riscv)
-        if (cpu->hartid != mp_response->bsp_hartid) {
-#elif defined(__loongarch__)
-        if (cpu->phys_id != mp_response->bsp_phys_id) {
 #endif
             uint32_t old_ctr = __atomic_load_n(&ctr, __ATOMIC_SEQ_CST);
 
@@ -753,17 +710,6 @@ FEAT_START
     printf("  mode: %lu\n", pm_response->mode);
 FEAT_END
 
-#if defined(__riscv)
-FEAT_START
-    printf("\n");
-    struct limine_riscv_bsp_hartid_response *bsp_response = _bsp_request.response;
-    if (bsp_response == NULL) {
-        printf("RISC-V BSP Hart ID was not passed\n");
-        break;
-    }
-    printf("RISC-V BSP Hart ID: %#lx\n", bsp_response->bsp_hartid);
-FEAT_END
-#endif
 
 FEAT_START
     printf("\n");

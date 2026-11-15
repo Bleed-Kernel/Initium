@@ -9,8 +9,8 @@ field lives, for hostile variants."""
 import struct
 
 # e_machine: (PE Machine, R_*_RELATIVE)
-MACHINES = {62: (0x8664, 8), 183: (0xaa64, 1027), 243: (0x5064, 3), 258: (0x6264, 3)}
-PE_MACHINES = {'x86_64': 0x8664, 'aarch64': 0xaa64, 'riscv64': 0x5064, 'loongarch64': 0x6264}
+MACHINES = {62: (0x8664, 8)}
+PE_MACHINES = {'x86_64': 0x8664}
 PT_LOAD, PT_DYNAMIC = 1, 2
 PF_X, PF_W = 1, 2
 DT_NULL, DT_RELA, DT_RELASZ, DT_RELAENT = 0, 7, 8, 9

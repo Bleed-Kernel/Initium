@@ -10,8 +10,7 @@ struct pt_walk {
     uint64_t page_size;
     bool writable;
     bool executable;
-    // x86: PAT index; aarch64: MAIR attribute index; riscv64: PBMT;
-    // loongarch64: MAT.
+    // PAT index
     int cache;
 };
 

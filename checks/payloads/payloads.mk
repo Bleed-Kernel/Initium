@@ -1,5 +1,5 @@
 # Builds the executables and images the checks boot, as make
-# check-payloads has it: with the toolchain that builds Limine, for the ports
+# check-payloads has it: with the toolchain that builds Initium, for the ports
 # the build enabled.
 
 .SUFFIXES:
@@ -14,21 +14,16 @@ OBJCOPY := llvm-objcopy
 READELF := llvm-readelf
 # Clang takes its target as a flag, and GCC from its name.
 CC_IS_CLANG := yes
-ENABLED_PORTS := bios uefi-ia32 uefi-x86-64 uefi-aarch64 uefi-riscv64 uefi-loongarch64
+ENABLED_PORTS := bios uefi-ia32 uefi-x86-64
 
 override PAYLOADS := $(SRCDIR)/checks/payloads
 override X86_PORTS := $(filter bios uefi-ia32 uefi-x86-64,$(ENABLED_PORTS))
-LIMINE_ARCHS ?= $(if $(X86_PORTS),x86_64) \
-    $(patsubst uefi-%,%,$(filter uefi-aarch64 uefi-riscv64 uefi-loongarch64,$(ENABLED_PORTS)))
+LIMINE_ARCHS ?= $(if $(X86_PORTS),x86_64)
 
 ifeq ($(CC_IS_CLANG),yes)
 override target = -target $(1)-unknown-none-elf
-override DIRECT_EXTERN := -fdirect-access-external-data
-override GOT_EXTERN := -fno-direct-access-external-data
 else
 override target :=
-override DIRECT_EXTERN := -mdirect-extern-access
-override GOT_EXTERN := -mno-direct-extern-access
 endif
 
 override COMMON_CFLAGS := \
@@ -49,38 +44,22 @@ override COMMON_CFLAGS := \
     -I $(SRCDIR)/limine-protocol/include
 
 override CFLAGS_x86_64 := $(call target,x86_64) -m64 -march=x86-64 -mgeneral-regs-only -mno-red-zone
-override CFLAGS_aarch64 := $(call target,aarch64) -mcpu=generic -march=armv8-a+nofp+nosimd \
-    -mno-outline-atomics
-override CFLAGS_riscv64 := $(call target,riscv64) -march=rv64imac_zicsr_zifencei -mabi=lp64 \
-    -mcmodel=medany -mno-relax
-override CFLAGS_loongarch64 := $(call target,loongarch64) -march=loongarch64 -mabi=lp64s -msoft-float \
-    $(DIRECT_EXTERN)
 
 override STATIC_CFLAGS_x86_64 := -fno-PIC -mcmodel=kernel
-override STATIC_CFLAGS_aarch64 := -fno-PIC
-override STATIC_CFLAGS_riscv64 := -fno-PIC
-override STATIC_CFLAGS_loongarch64 := -fno-PIC
 
 # Per layout beyond static: compiler and link flags. A shared object reaches
 # its global symbols through the dynamic symbol table.
 override LAYOUT_CFLAGS_pie := -fPIE
 override LAYOUT_CFLAGS_pierelr := -fPIE
 override LAYOUT_CFLAGS_shared := -fPIC
-override SHARED_CFLAGS_loongarch64 := $(GOT_EXTERN)
 override LAYOUT_LDFLAGS_pie := -pie --no-dynamic-linker -z text
 override LAYOUT_LDFLAGS_pierelr := -pie --no-dynamic-linker -z text -z pack-relative-relocs
 override LAYOUT_LDFLAGS_shared := -shared -z text -e _start
 
 override LDFLAGS_x86_64 := -m elf_x86_64
-override LDFLAGS_aarch64 := -m aarch64elf
-override LDFLAGS_riscv64 := -m elf64lriscv --no-relax
-override LDFLAGS_loongarch64 := -m elf64loongarch
 
 # The highest paging mode in the protocol's numbering, per architecture.
 override PAGING_TOP_x86_64 := 1
-override PAGING_TOP_aarch64 := 1
-override PAGING_TOP_riscv64 := 2
-override PAGING_TOP_loongarch64 := 0
 
 # Variant name, layout (static, pie, pierelr or shared), extra defines. Paging
 # values below that use $(ARCH) are expanded per architecture.
@@ -167,22 +146,15 @@ $(foreach a,$(LIMINE_ARCHS),$(foreach v,$(LIMINE_VARIANTS),$(eval $(call limine_
 .PHONY: limine-kernels
 limine-kernels: $(LIMINE_ELFS)
 
-# The EFI probe, for every UEFI target, built the way Limine builds itself:
+# The EFI probe, for every UEFI target, built the way Initium builds itself:
 # PicoEFI's entry stub, self-relocator and linker script.
 override EFI_TARGETS := $(subst x86-64,x86_64,$(patsubst uefi-%,%,$(filter uefi-%,$(ENABLED_PORTS))))
 
 override EFI_CFLAGS_x86_64 := $(call target,x86_64) -m64 -march=x86-64 -mgeneral-regs-only -mno-red-zone
 override EFI_CFLAGS_ia32 := $(call target,i686) -m32 -march=i686 -mgeneral-regs-only -malign-double
-override EFI_CFLAGS_aarch64 := $(call target,aarch64) -mgeneral-regs-only
-override EFI_CFLAGS_riscv64 := $(call target,riscv64) -march=rv64imac_zicsr_zifencei -mabi=lp64 -mno-relax
-override EFI_CFLAGS_loongarch64 := $(call target,loongarch64) -march=loongarch64 -mabi=lp64s -msoft-float \
-    $(DIRECT_EXTERN)
 
 override EFI_LDFLAGS_x86_64 := -m elf_x86_64
 override EFI_LDFLAGS_ia32 := -m elf_i386
-override EFI_LDFLAGS_aarch64 := -m aarch64elf
-override EFI_LDFLAGS_riscv64 := -m elf64lriscv --no-relax
-override EFI_LDFLAGS_loongarch64 := -m elf64loongarch
 
 override EFI_COMMON_CFLAGS := -std=gnu11 -O2 -g -Wall -Wextra -Werror -ffreestanding -fno-stack-protector \
     -fno-stack-check -fno-lto -fno-exceptions -fPIE -fshort-wchar -nostdinc \
@@ -220,48 +192,6 @@ $(foreach t,$(EFI_TARGETS),$(eval $(call efi_target,$(t))))
 
 .PHONY: efi-probes
 efi-probes: $(EFI_PROBES)
-
-# Linux stand-ins: an Image for each non-x86 architecture. The arm64 one comes
-# in two flavours of the header's physical placement flag, the riscv64 one
-# also with a header version Limine refuses.
-override LINUX_CFLAGS := -std=gnu11 -O2 -Wall -Wextra -Werror -ffreestanding -fno-stack-protector \
-    -fno-stack-check -fno-lto -fno-exceptions -fPIE -fvisibility=hidden -nostdinc \
-    -isystem $(SRCDIR)/freestanding-c-hdrs/include
-override LINUX_CFLAGS_aarch64 := $(CFLAGS_aarch64) -mstrict-align -mgeneral-regs-only
-override LINUX_CFLAGS_riscv64 := $(CFLAGS_riscv64)
-override LINUX_CFLAGS_loongarch64 := $(CFLAGS_loongarch64)
-
-override define linux_stub
-$(OUT)/linux/$(1)/$(2)/stub.o: $(PAYLOADS)/linux/stub.c $(PAYLOADS)/payloads.mk
-	mkdir -p $$(@D)
-	$$(CC) $$(LINUX_CFLAGS) $$(LINUX_CFLAGS_$(1)) -c $$< -o $$@
-
-$(OUT)/linux/$(1)/$(2)/head.o: $(PAYLOADS)/linux/head_$(1).S $(PAYLOADS)/payloads.mk
-	mkdir -p $$(@D)
-	$$(CC) $$(LINUX_CFLAGS) $$(LINUX_CFLAGS_$(1)) $(3) -c $$< -o $$@
-
-$(OUT)/linux/$(1)/$(2)/Image.elf: $(OUT)/linux/$(1)/$(2)/head.o $(OUT)/linux/$(1)/$(2)/stub.o $(PAYLOADS)/linux/stub.ld
-	$$(LD) $$(LDFLAGS_$(1)) -nostdlib -static -z max-page-size=0x1000 --defsym=LOAD_OFFSET=0x200000 \
-		-T $(PAYLOADS)/linux/stub.ld $(OUT)/linux/$(1)/$(2)/head.o $(OUT)/linux/$(1)/$(2)/stub.o -o $$@
-
-$(OUT)/linux/$(1)/$(2)/Image: $(OUT)/linux/$(1)/$(2)/Image.elf
-	$$(OBJCOPY) -O binary $$< $$@
-
-override LINUX_STUBS += $(OUT)/linux/$(1)/$(2)/Image
-endef
-
-ifneq ($(filter aarch64,$(LIMINE_ARCHS)),)
-$(eval $(call linux_stub,aarch64,default,-DIMAGE_FLAGS=0x2))
-$(eval $(call linux_stub,aarch64,anywhere,-DIMAGE_FLAGS=0xa))
-endif
-ifneq ($(filter riscv64,$(LIMINE_ARCHS)),)
-$(eval $(call linux_stub,riscv64,default,))
-$(eval $(call linux_stub,riscv64,proto01,-DIMAGE_VERSION=0x1))
-endif
-ifneq ($(filter loongarch64,$(LIMINE_ARCHS)),)
-$(eval $(call linux_stub,loongarch64,default,))
-endif
-
 
 # The x86 bzImage stand-in: position independent 32-bit and 64-bit builds
 # behind the real-mode header.
@@ -327,7 +257,7 @@ $(OUT)/bios/a20off-noint15.bin: $(PAYLOADS)/bios/a20off.asm
 	nasm -f bin -Wall -w-reloc -Werror -DBREAK_INT15 $< -o $@
 
 .PHONY: linux-stubs
-linux-stubs: $(LINUX_STUBS) $(if $(X86_PORTS),$(X86_BZIMAGES))
+linux-stubs: $(if $(X86_PORTS),$(X86_BZIMAGES))
 
 .PHONY: bios-payloads
 bios-payloads: $(OUT)/bios/bootrec.bin $(OUT)/bios/a20off.bin $(OUT)/bios/a20off-noint15.bin

@@ -1,4 +1,3 @@
-#if defined(__x86_64__) || defined(__i386__)
 
 #include <stdint.h>
 #include <stddef.h>
@@ -258,4 +257,3 @@ void iommu_disable_all(void) {
     amdvi_disable_all();
 }
 
-#endif

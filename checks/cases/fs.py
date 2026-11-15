@@ -225,7 +225,7 @@ def fs_iso9660_rock_ridge(t):
     data = b'rock ridge module\n' * 40
     tree = kernel_tree(t)
     tree.add('/Mixed/Case-Name.Module', data)
-    tree.add('/boot/limine.conf', modules_config([('boot():/Mixed/Case-Name.Module', 'rr')]))
+    tree.add('/boot/initium.conf', modules_config([('boot():/Mixed/Case-Name.Module', 'rr')]))
     m = iso_boot(t, tree)
     r = boot_report(t, m)
     t.expect_eq(r['module.00.hash'], fnv1a(data), 'Rock Ridge name found as written')
@@ -233,7 +233,7 @@ def fs_iso9660_rock_ridge(t):
     m.stop()
     tree = kernel_tree(t)
     tree.add('/Mixed/Case-Name.Module', data)
-    tree.add('/boot/limine.conf', modules_config([('boot():/mixed/case-name.module', None)]))
+    tree.add('/boot/initium.conf', modules_config([('boot():/mixed/case-name.module', None)]))
     m = iso_boot(t, tree)
     msg, _ = wait_panic(t, m)
     t.expect_eq(msg, 'limine: Failed to open module with path `boot():/mixed/case-name.module`. '
@@ -241,7 +241,7 @@ def fs_iso9660_rock_ridge(t):
 
 
 # ISO 9660 level 3 names hold up to 31 characters, and relaxed ones keep the
-# '-' of limine-bios.sys; xorriso uppercases them.
+# '-' of initium-bios.sys; xorriso uppercases them.
 PLAIN_ISO = ['-iso-level', '3', '-relaxed-filenames']
 
 
@@ -296,7 +296,7 @@ def fs_iso9660_plain(t):
     data = b'plain iso module\n' * 40
     tree = kernel_tree(t)
     tree.add('/boot/mod.bin', data)
-    tree.add('/boot/limine.conf', modules_config([('boot():/boot/mod.bin', 'plain')]))
+    tree.add('/boot/initium.conf', modules_config([('boot():/boot/mod.bin', 'plain')]))
     m = iso_boot(t, tree, rock_ridge=False, joliet=False, extra_args=PLAIN_ISO)
     r = boot_report(t, m)
     t.expect_eq(r['module.00.hash'], fnv1a(data), 'ISO 9660 name matched in lowercase')
@@ -304,7 +304,7 @@ def fs_iso9660_plain(t):
     long = 'A-Name-Too-Long-For-ISO-9660-Level-3.module'
     tree = kernel_tree(t)
     tree.add('/boot/' + long, data)
-    tree.add('/boot/limine.conf', modules_config([(f'boot():/boot/{long}', None)]))
+    tree.add('/boot/initium.conf', modules_config([(f'boot():/boot/{long}', None)]))
     m = iso_boot(t, tree, rock_ridge=False, joliet=True, extra_args=PLAIN_ISO)
     msg, _ = wait_panic(t, m)
     t.expect_eq(msg, f'limine: Failed to open module with path `boot():/boot/{long}`. Is the path correct?',
@@ -439,7 +439,7 @@ def fs_resources(t):
         guid = disk.parts[1].guid
         mods += [(f'guid({guid}):/m2.bin', 'guid'), (f'uuid({guid.lower()}):/m2.bin', 'uuid')]
     # The config goes in last, once the partition GUID is known.
-    boot_tree.add('/boot/limine.conf', modules_config(mods))
+    boot_tree.add('/boot/initium.conf', modules_config(mods))
     disk.parts[0].fs.write_into(t.path('a.img'), disk.parts[0].start_sector * 512, disk.parts[0].sectors * 512,
                                 t.workdir)
     if not t.port.is_uefi:

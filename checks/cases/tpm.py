@@ -11,11 +11,11 @@ from harness.report import fnv1a, unescape
 from cases._common import entry, kernel_file, read, screen_text, wait_panic
 from cases.secureboot import kernel_entry, sb_boot
 
-# Measured boot as USAGE.md's "Measured Boot" section has it: what Limine
+# Measured boot as USAGE.md's "Measured Boot" section has it: what Initium
 # extends PCR 8 and PCR 9 with, read back from the event log the check
 # executable is handed. A TPM takes the firmware's -secboot build, left
 # in Setup Mode unless a check enrols keys. [intent] marks what only
-# Limine's code says.
+# Initium's code says.
 
 EV_IPL = 0x0000000d
 
@@ -84,7 +84,7 @@ def tpm_measured_boot(t):
         (EV_IPL, sha256(m2path.encode()), f'module_path: {m2path}'),
     ], '[spec] PCR 8 ([intent] the paths described without their hash)')
     t.expect_eq(by_pcr(evs, 9), [
-        (EV_IPL, sha256(config.encode()), 'limine_cfg'),
+        (EV_IPL, sha256(config.encode()), 'initium_cfg'),
         (EV_IPL, sha256(kernel), f'path: {kpath}#{blake2b(kernel)}'),
         (EV_IPL, sha256(mod1), f'module_path: {m1path}'),
         (EV_IPL, sha256(mod2), f'module_path: {m2path}#{blake2b(mod2)}'),
@@ -93,7 +93,7 @@ def tpm_measured_boot(t):
 
 @check(ports=UEFI_PORTS, tags=['tpm'])
 def tpm_not_opted_in(t):
-    """Without measured_boot Limine extends nothing, but the firmware's own
+    """Without measured_boot Initium extends nothing, but the firmware's own
     event log is still passed on."""
     config = 'timeout: 0\n' + entry('Test', path='boot():/boot/kernel.elf', cmdline='plain')
     m = tpm_boot(t, config, {'/boot/kernel.elf': HostFile(kernel_file(t, 'full'))})
@@ -130,7 +130,7 @@ def tpm_forced_by_secure_boot(t):
     tpm_firmware(t)
     m = sb_boot(t, 'timeout: 0\n' + kernel_entry(t), tpm=t.software_tpm())
     evs = events(t.kernel_report(m, timeout=120))
-    t.check(any(pcr == 9 and data == 'limine_cfg' for pcr, _, _, data in evs),
+    t.check(any(pcr == 9 and data == 'initium_cfg' for pcr, _, _, data in evs),
             f'[spec] the config measured into PCR 9: {[(e[0], e[3]) for e in evs]}')
 
 
@@ -162,7 +162,7 @@ CC_PROMPT = 'Press Y to continue, press any other key to panic...'
 
 def cc_extends(text):
     """(pcr, mr, type, fnv1a, length, description) of each extend the probe's
-    CC protocol saw, the PCR the one Limine mapped just before it."""
+    CC protocol saw, the PCR the one Initium mapped just before it."""
     out, pcr = [], None
     for kind, value in CC_CALL.findall(text):
         if kind == 'map':
@@ -180,7 +180,7 @@ def cc_boot(t, flags, config, files):
 
 def answer_prompts(t, m, key, done, most):
     """Answer each prompt to go on unmeasured with key until done(); return
-    how many Limine showed."""
+    how many Initium showed."""
     answered = 0
     deadline = time.monotonic() + 120 * t.port.timeout_scale
     while not done():
@@ -212,7 +212,7 @@ def tpm_cc_measurements(t):
     # Firmware measures into the PCRs below 8 for itself.
     evs = [e for e in cc_extends(m.stream(t.kernel_channel).text()) if e[0] >= 8]
     want = [(8, b'cc cmdline', 'cmdline: cc cmdline'), (8, kpath.encode(), f'path: {kpath}'),
-            (8, mpath.encode(), f'module_path: {mpath}'), (9, config.encode(), 'limine_cfg'),
+            (8, mpath.encode(), f'module_path: {mpath}'), (9, config.encode(), 'initium_cfg'),
             (9, kernel, f'path: {kpath}'), (9, mod, f'module_path: {mpath}')]
     got = sorted(evs, key=lambda e: e[0])
     t.expect_eq(got, [(pcr, 3, EV_IPL, int(fnv1a(data), 16), len(data), desc) for pcr, data, desc in want],
@@ -292,7 +292,7 @@ def tpm_cc_linux(t):
     text = m.stream(t.kernel_channel).text()
     evs = [e for e in cc_extends(text) if e[0] >= 8]
     want = [(8, b'cc linux', 'cmdline: cc linux'), (8, f'boot():{path}'.encode(), f'path: boot():{path}'),
-            (8, b'boot():/initrd', 'module_path: boot():/initrd'), (9, config.encode(), 'limine_cfg'),
+            (8, b'boot():/initrd', 'module_path: boot():/initrd'), (9, config.encode(), 'initium_cfg'),
             (9, kernel, f'path: boot():{path}'), (9, initrd, 'module_path: boot():/initrd')]
     t.expect_eq(sorted(evs, key=lambda e: e[0]),
                 [(pcr, 3, EV_IPL, int(fnv1a(data), 16), len(data), desc) for pcr, data, desc in want],

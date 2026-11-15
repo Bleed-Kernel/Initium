@@ -22,8 +22,8 @@ mbrtest.hdd:
 fat12-test:
 	$(MAKE) test-clean
 	$(MAKE) test.hdd
-	$(MAKE) limine-bios
-	$(MAKE) limine
+	$(MAKE) initium-bios
+	$(MAKE) initium
 	$(MAKE) -C '$(call SHESCAPE,$(SRCDIR))/test' -f test.mk ARCH=x86
 	rm -rf test_image/
 	mkdir test_image
@@ -38,15 +38,15 @@ fat12-test:
 	sudo umount test_image/
 	sudo losetup -d `cat loopback_dev`
 	rm -rf test_image loopback_dev
-	$(BINDIR)/limine bios-install test.hdd
+	$(BINDIR)/initium bios-install test.hdd
 	qemu-system-x86_64 -net none -smp 4   -hda test.hdd -debugcon stdio
 
 .PHONY: fat16-test
 fat16-test:
 	$(MAKE) test-clean
 	$(MAKE) test.hdd
-	$(MAKE) limine-bios
-	$(MAKE) limine
+	$(MAKE) initium-bios
+	$(MAKE) initium
 	$(MAKE) -C '$(call SHESCAPE,$(SRCDIR))/test' -f test.mk ARCH=x86
 	rm -rf test_image/
 	mkdir test_image
@@ -61,7 +61,7 @@ fat16-test:
 	sudo umount test_image/
 	sudo losetup -d `cat loopback_dev`
 	rm -rf test_image loopback_dev
-	$(BINDIR)/limine bios-install test.hdd
+	$(BINDIR)/initium bios-install test.hdd
 	qemu-system-x86_64 -net none -smp 4   -hda test.hdd -debugcon stdio
 
 .PHONY: legacy-fat16-test
@@ -69,8 +69,8 @@ legacy-fat16-test:
 	$(MAKE) test-clean
 	$(MAKE) mbrtest.hdd
 	fdisk -l mbrtest.hdd
-	$(MAKE) limine-bios
-	$(MAKE) limine
+	$(MAKE) initium-bios
+	$(MAKE) initium
 	$(MAKE) -C '$(call SHESCAPE,$(SRCDIR))/test' -f test.mk ARCH=x86
 	rm -rf test_image/
 	mkdir test_image
@@ -85,15 +85,15 @@ legacy-fat16-test:
 	sudo umount test_image/
 	sudo losetup -d `cat loopback_dev`
 	rm -rf test_image loopback_dev
-	$(BINDIR)/limine bios-install mbrtest.hdd
+	$(BINDIR)/initium bios-install mbrtest.hdd
 	qemu-system-i386 -cpu pentium2 -m 16M -M isapc -net none   -hda mbrtest.hdd -debugcon stdio
 
 .PHONY: fat32-test
 fat32-test:
 	$(MAKE) test-clean
 	$(MAKE) test.hdd
-	$(MAKE) limine-bios
-	$(MAKE) limine
+	$(MAKE) initium-bios
+	$(MAKE) initium
 	$(MAKE) -C '$(call SHESCAPE,$(SRCDIR))/test' -f test.mk ARCH=x86
 	rm -rf test_image/
 	mkdir test_image
@@ -108,20 +108,20 @@ fat32-test:
 	sudo umount test_image/
 	sudo losetup -d `cat loopback_dev`
 	rm -rf test_image loopback_dev
-	$(BINDIR)/limine bios-install test.hdd
+	$(BINDIR)/initium bios-install test.hdd
 	qemu-system-x86_64 -net none -smp 4   -hda test.hdd -debugcon stdio
 
 .PHONY: iso9660-test
 iso9660-test:
 	$(MAKE) test-clean
 	$(MAKE) test.hdd
-	$(MAKE) limine-bios
+	$(MAKE) initium-bios
 	$(MAKE) -C '$(call SHESCAPE,$(SRCDIR))/test' -f test.mk ARCH=x86
 	rm -rf test_image/
 	$(MKDIR_P) test_image/boot
 	cp -R $(BINDIR)/* test_image/boot/
 	cp -R '$(call SHESCAPE,$(SRCDIR))/test'/* test_image/boot/
-	xorriso -as mkisofs -b boot/limine-bios-cd.bin -no-emul-boot -boot-load-size 4 -boot-info-table test_image/ -o test.iso
+	xorriso -as mkisofs -b boot/initium-bios-cd.bin -no-emul-boot -boot-load-size 4 -boot-info-table test_image/ -o test.iso
 	qemu-system-x86_64 -net none -smp 4   -cdrom test.iso -debugcon stdio
 
 .PHONY: full-hybrid-test
@@ -136,8 +136,8 @@ full-hybrid-test:
 	cp -R '$(call SHESCAPE,$(SRCDIR))/test'/* test_image/boot/
 	$(MKDIR_P) test_image/EFI/BOOT
 	cp $(BINDIR)/BOOT*.EFI test_image/EFI/BOOT/
-	xorriso -as mkisofs -R -r -J -b boot/limine-bios-cd.bin -no-emul-boot -boot-load-size 4 -boot-info-table -hfsplus -apm-block-size 2048 --efi-boot boot/limine-uefi-cd.bin -efi-boot-part --efi-boot-image --protective-msdos-label test_image/ -o test.iso
-	$(BINDIR)/limine bios-install test.iso
+	xorriso -as mkisofs -R -r -J -b boot/initium-bios-cd.bin -no-emul-boot -boot-load-size 4 -boot-info-table -hfsplus -apm-block-size 2048 --efi-boot boot/initium-uefi-cd.bin -efi-boot-part --efi-boot-image --protective-msdos-label test_image/ -o test.iso
+	$(BINDIR)/initium bios-install test.iso
 	qemu-system-x86_64 -m 512M -M q35 -drive if=pflash,unit=0,format=raw,file=edk2-ovmf-bins/ovmf-code-x86_64.fd,readonly=on -net none -smp 4 -device virtio-tablet-pci -device virtio-mouse-pci   -cdrom test.iso -debugcon stdio
 	qemu-system-x86_64 -m 512M -M q35 -drive if=pflash,unit=0,format=raw,file=edk2-ovmf-bins/ovmf-code-x86_64.fd,readonly=on -net none -smp 4 -device virtio-tablet-pci -device virtio-mouse-pci   -hda test.iso -debugcon stdio
 	qemu-system-x86_64 -m 512M -M q35 -drive if=pflash,unit=0,format=raw,file=edk2-ovmf-bins/ovmf-code-ia32.fd,readonly=on -net none -smp 4 -device virtio-tablet-pci -device virtio-mouse-pci   -cdrom test.iso -debugcon stdio
@@ -148,13 +148,13 @@ full-hybrid-test:
 .PHONY: pxe-test
 pxe-test:
 	$(MAKE) test-clean
-	$(MAKE) limine-bios
+	$(MAKE) initium-bios
 	$(MAKE) -C '$(call SHESCAPE,$(SRCDIR))/test' -f test.mk ARCH=x86
 	rm -rf test_image/
 	$(MKDIR_P) test_image/boot
 	cp -R $(BINDIR)/* test_image/boot/
 	cp -R '$(call SHESCAPE,$(SRCDIR))/test'/* test_image/boot/
-	qemu-system-x86_64  -smp 4  -netdev user,id=n0,tftp=./test_image,bootfile=boot/limine-bios-pxe.bin -device rtl8139,netdev=n0,mac=00:00:00:11:11:11 -debugcon stdio
+	qemu-system-x86_64  -smp 4  -netdev user,id=n0,tftp=./test_image,bootfile=boot/initium-bios-pxe.bin -device rtl8139,netdev=n0,mac=00:00:00:11:11:11 -debugcon stdio
 
 # OVMF's PXE stack needs an entropy source to come up: without the virtio RNG
 # no network boot option is registered at all.
@@ -162,7 +162,7 @@ pxe-test:
 uefi-x86-64-pxe-test:
 	$(MAKE) edk2-ovmf-bins
 	$(MAKE) test-clean
-	$(MAKE) limine-uefi-x86-64
+	$(MAKE) initium-uefi-x86-64
 	$(MAKE) -C '$(call SHESCAPE,$(SRCDIR))/test' -f test.mk ARCH=x86
 	rm -rf test_image/
 	$(MKDIR_P) test_image/boot
@@ -175,7 +175,7 @@ uefi-x86-64-test:
 	$(MAKE) edk2-ovmf-bins
 	$(MAKE) test-clean
 	$(MAKE) test.hdd
-	$(MAKE) limine-uefi-x86-64
+	$(MAKE) initium-uefi-x86-64
 	$(MAKE) -C '$(call SHESCAPE,$(SRCDIR))/test' -f test.mk ARCH=x86
 	rm -rf test_image/
 	mkdir test_image
@@ -194,84 +194,12 @@ uefi-x86-64-test:
 	rm -rf test_image loopback_dev
 	qemu-system-x86_64 -m 512M -M q35 -drive if=pflash,unit=0,format=raw,file=edk2-ovmf-bins/ovmf-code-x86_64.fd,readonly=on -net none -smp 4 -device virtio-tablet-pci -device virtio-mouse-pci   -hda test.hdd -debugcon stdio
 
-.PHONY: uefi-aa64-test
-uefi-aa64-test:
-	$(MAKE) edk2-ovmf-bins
-	$(MAKE) test-clean
-	$(MAKE) test.hdd
-	$(MAKE) limine-uefi-aarch64
-	$(MAKE) -C '$(call SHESCAPE,$(SRCDIR))/test' -f test.mk ARCH=aarch64
-	rm -rf test_image/
-	mkdir test_image
-	sudo losetup -Pf --show test.hdd > loopback_dev
-	sudo partprobe `cat loopback_dev`
-	sudo mkfs.fat -F 32 `cat loopback_dev`p1
-	sudo mount `cat loopback_dev`p1 test_image
-	sudo mkdir test_image/boot
-	sudo cp -R $(BINDIR)/* test_image/boot/
-	sudo cp -R '$(call SHESCAPE,$(SRCDIR))/test'/* test_image/boot/
-	sudo $(MKDIR_P) test_image/EFI/BOOT
-	sudo cp $(BINDIR)/BOOTAA64.EFI test_image/EFI/BOOT/
-	sync
-	sudo umount test_image/
-	sudo losetup -d `cat loopback_dev`
-	rm -rf test_image loopback_dev
-	qemu-system-aarch64 -m 512M -M virt -cpu cortex-a72 -drive if=pflash,unit=0,format=raw,file=edk2-ovmf-bins/ovmf-code-aarch64.fd,readonly=on -net none -smp 4 -device ramfb -device qemu-xhci -device usb-kbd -device virtio-tablet-pci -device virtio-mouse-pci  -hda test.hdd -serial stdio
-
-.PHONY: uefi-rv64-test
-uefi-rv64-test:
-	$(MAKE) edk2-ovmf-bins
-	$(MAKE) test-clean
-	$(MAKE) test.hdd
-	$(MAKE) limine-uefi-riscv64
-	$(MAKE) -C '$(call SHESCAPE,$(SRCDIR))/test' -f test.mk ARCH=riscv64
-	rm -rf test_image/
-	mkdir test_image
-	sudo losetup -Pf --show test.hdd > loopback_dev
-	sudo partprobe `cat loopback_dev`
-	sudo mkfs.fat -F 32 `cat loopback_dev`p1
-	sudo mount `cat loopback_dev`p1 test_image
-	sudo mkdir test_image/boot
-	sudo cp -R $(BINDIR)/* test_image/boot/
-	sudo cp -R '$(call SHESCAPE,$(SRCDIR))/test'/* test_image/boot/
-	sudo $(MKDIR_P) test_image/EFI/BOOT
-	sudo cp $(BINDIR)/BOOTRISCV64.EFI test_image/EFI/BOOT/
-	sync
-	sudo umount test_image/
-	sudo losetup -d `cat loopback_dev`
-	rm -rf test_image loopback_dev
-	qemu-system-riscv64 -m 512M -M virt -cpu rv64 -drive if=pflash,unit=0,format=raw,file=edk2-ovmf-bins/ovmf-code-riscv64.fd,readonly=on -net none -smp 4 -device ramfb -device qemu-xhci -device usb-kbd -device virtio-tablet-pci -device virtio-mouse-pci -hda test.hdd -serial stdio
-
-.PHONY: uefi-loongarch64-test
-uefi-loongarch64-test:
-	$(MAKE) edk2-ovmf-bins
-	$(MAKE) test-clean
-	$(MAKE) test.hdd
-	$(MAKE) limine-uefi-loongarch64
-	$(MAKE) -C '$(call SHESCAPE,$(SRCDIR))/test' -f test.mk ARCH=loongarch64
-	rm -rf test_image/
-	mkdir test_image
-	sudo losetup -Pf --show test.hdd > loopback_dev
-	sudo partprobe `cat loopback_dev`
-	sudo mkfs.fat -F 32 `cat loopback_dev`p1
-	sudo mount `cat loopback_dev`p1 test_image
-	sudo mkdir test_image/boot
-	sudo cp -R $(BINDIR)/* test_image/boot/
-	sudo cp -R '$(call SHESCAPE,$(SRCDIR))/test'/* test_image/boot/
-	sudo $(MKDIR_P) test_image/EFI/BOOT
-	sudo cp $(BINDIR)/BOOTLOONGARCH64.EFI test_image/EFI/BOOT/
-	sync
-	sudo umount test_image/
-	sudo losetup -d `cat loopback_dev`
-	rm -rf test_image loopback_dev
-	qemu-system-loongarch64 -m 1G -net none -M virt -cpu la464 -smp 4 -device ramfb -device qemu-xhci -device usb-kbd -device virtio-tablet-pci -device virtio-mouse-pci -drive if=pflash,unit=0,format=raw,file=edk2-ovmf-bins/ovmf-code-loongarch64.fd,readonly=on -hda test.hdd -serial stdio
-
 .PHONY: uefi-ia32-test
 uefi-ia32-test:
 	$(MAKE) edk2-ovmf-bins
 	$(MAKE) test-clean
 	$(MAKE) test.hdd
-	$(MAKE) limine-uefi-ia32
+	$(MAKE) initium-uefi-ia32
 	$(MAKE) -C '$(call SHESCAPE,$(SRCDIR))/test' -f test.mk ARCH=x86
 	rm -rf test_image/
 	mkdir test_image

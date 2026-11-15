@@ -20,25 +20,25 @@ DHCPACK = 5
 
 
 def pxe_tree(t, configs, files=None):
-    """What the server holds: the boot file, for BIOS limine-bios.sys, and
+    """What the server holds: the boot file, for BIOS initium-bios.sys, and
     configs and files by path."""
     tree = Tree()
     if t.port.is_uefi:
         tree.add('/' + t.port.efi_name, HostFile(t.env.bin(t.port.efi_name)))
     else:
-        tree.add('/limine-bios-pxe.bin', HostFile(t.env.bin('limine-bios-pxe.bin')))
-        tree.add('/limine-bios.sys', HostFile(t.env.bin('limine-bios.sys')))
+        tree.add('/initium-bios-pxe.bin', HostFile(t.env.bin('initium-bios-pxe.bin')))
+        tree.add('/initium-bios.sys', HostFile(t.env.bin('initium-bios.sys')))
     for path, data in {**configs, **(files or {})}.items():
         tree.add(path, data)
     return tree
 
 
 def boot_file(t):
-    return t.port.efi_name if t.port.is_uefi else 'limine-bios-pxe.bin'
+    return t.port.efi_name if t.port.is_uefi else 'initium-bios-pxe.bin'
 
 
 def pxe_boot(t, configs, files=None, **machine):
-    """Boot Limine over PXE; configs maps paths on the server to configs."""
+    """Boot Initium over PXE; configs maps paths on the server to configs."""
     return t.boot_pxe(pxe_tree(t, configs, files), boot_file(t), **machine)
 
 
@@ -61,7 +61,7 @@ def dhcp_message(packet):
 
 @check(ports=ALL_PORTS, tags=['pxe'])
 def pxe_boot_files(t):
-    """Booted over PXE, Limine reads its config and what it loads from the
+    """Booted over PXE, Initium reads its config and what it loads from the
     server: boot() standing for tftp(), tftp() for the server it booted from,
     tftp(ip) for the one given. The files are TFTP media, their server's
     address and port given (PROTOCOL.md)."""
@@ -69,7 +69,7 @@ def pxe_boot_files(t):
     m1, m2 = b'first module\n' * 50, b'second module\n' * 70
     config = 'timeout: 0\n' + kernel_entry(t, 'over the net', modules=[
         ('tftp():/boot/m1.bin', 'one'), (f'tftp({SERVER}):/m2.bin', 'two')])
-    m = pxe_boot(t, {'/limine.conf': config},
+    m = pxe_boot(t, {'/initium.conf': config},
                  {'/boot/kernel.elf': kernel, '/boot/m1.bin': m1, '/m2.bin': m2})
     r = t.kernel_report(m, timeout=120)
     check_report_clean(t, r)
@@ -86,13 +86,13 @@ def pxe_boot_files(t):
 @check(ports=ALL_PORTS, tags=['pxe'])
 def pxe_config_search(t):
     """The config is looked for on the server as on any volume (CONFIG.md):
-    on UEFI /EFI/BOOT/limine.conf first, the image's path being no file
-    path, then /boot/limine/limine.conf, and /limine.conf last."""
-    configs = {'/limine.conf': 'timeout: 0\n' + kernel_entry(t, 'root'),
-               '/boot/limine/limine.conf': 'timeout: 0\n' + kernel_entry(t, 'boot limine')}
+    on UEFI /EFI/BOOT/initium.conf first, the image's path being no file
+    path, then /boot/initium/initium.conf, and /initium.conf last."""
+    configs = {'/initium.conf': 'timeout: 0\n' + kernel_entry(t, 'root'),
+               '/boot/initium/initium.conf': 'timeout: 0\n' + kernel_entry(t, 'boot limine')}
     expected = 'boot limine'
     if t.port.is_uefi:
-        configs['/EFI/BOOT/limine.conf'] = 'timeout: 0\n' + kernel_entry(t, 'efi boot')
+        configs['/EFI/BOOT/initium.conf'] = 'timeout: 0\n' + kernel_entry(t, 'efi boot')
         expected = 'efi boot'
     m = pxe_boot(t, configs, {'/boot/kernel.elf': HostFile(kernel_file(t, 'full'))})
     t.expect_eq(unescape(t.kernel_report(m, timeout=120)['cmdline']), expected, '[spec] the config used')
@@ -103,7 +103,7 @@ def pxe_no_uefi_shell(t):
     """Booted over PXE the menu offers no UEFI Shell, even with one on the
     server (USAGE.md)."""
     config = 'timeout: no\n' + kernel_entry(t, 'menu')
-    m = pxe_boot(t, {'/limine.conf': config}, {'/' + t.port.shell_name: HostFile(t.env.bin(t.port.efi_name)),
+    m = pxe_boot(t, {'/initium.conf': config}, {'/' + t.port.shell_name: HostFile(t.env.bin(t.port.efi_name)),
                                                '/boot/kernel.elf': HostFile(kernel_file(t, 'full'))})
     text = screen_text(t.wait_text(m, 'ARROWS', 120))
     t.check('UEFI Shell' not in text, f'[spec] no U key:\n{text}')
@@ -114,7 +114,7 @@ def pxe_mb2_network_tag(t):
     """A Multiboot 2 kernel booted over PXE gets the DHCP ACK in a network
     tag (Multiboot2 2.0 section 3.6.18), as GRUB passes it."""
     config = 'timeout: 0\n' + entry('MB2', protocol='multiboot2', path='boot():/boot/kernel', cmdline='net')
-    m = pxe_boot(t, {'/limine.conf': config}, {'/boot/kernel': HostFile(mb2_kernel(t))})
+    m = pxe_boot(t, {'/initium.conf': config}, {'/boot/kernel': HostFile(mb2_kernel(t))})
     r = mb2_report(t, m)
     t.expect_eq([tag[1] for tag in mb2_tags(r)].count(16), 1, '[spec] one network tag')
     t.require('network' in r, 'network tag reported')
@@ -138,7 +138,7 @@ def pxe_tftp_off_pxe(t):
 
 
 def boot_outcome(t, m, timeout=120):
-    """'booted', 'no config' if Limine's menu says it found none, or None."""
+    """'booted', 'no config' if Initium's menu says it found none, or None."""
     deadline = time.monotonic() + timeout * t.port.timeout_scale
     while time.monotonic() < deadline:
         if 'E DONE' in m.stream(t.kernel_channel).text():
@@ -154,7 +154,7 @@ def boot_outcome(t, m, timeout=120):
 
 @check(ports=ALL_PORTS, tags=['pxe'])
 def pxe_tsize(t):
-    """USAGE.md: the server must report sizes (tsize, RFC 2349), Limine
+    """USAGE.md: the server must report sizes (tsize, RFC 2349), Initium
     asking for the size of every file and taking a file whose size goes
     unreported for missing; on UEFI through the firmware, which EDK2 sizes
     files with only by tsize, though UEFI 2.11 has it download them to learn
@@ -165,7 +165,7 @@ def pxe_tsize(t):
     def boot(options):
         # DHCP tells the firmware the size of the boot file, which it would
         # not otherwise fetch without tsize.
-        return t.boot_pxe(pxe_tree(t, {'/limine.conf': config}, files), boot_file(t), tftp_options=options,
+        return t.boot_pxe(pxe_tree(t, {'/initium.conf': config}, files), boot_file(t), tftp_options=options,
                           bootfile_size=t.port.is_uefi)
 
     m = boot(('blksize', 'tsize'))
@@ -173,7 +173,7 @@ def pxe_tsize(t):
     t.check(not m.boot_server.errors, f'server errors: {m.boot_server.errors}')
     if not t.port.is_uefi:
         requests = m.boot_server.requests
-        for name in ('limine-bios.sys', 'limine.conf', 'boot/kernel.elf'):
+        for name in ('initium-bios.sys', 'initium.conf', 'boot/kernel.elf'):
             asked = [opts for n, opts in requests if n.lstrip('/').endswith(name)]
             t.check(any('tsize' in opts for opts in asked), f'[spec] the size of {name} asked: {requests}')
     m.stop()
@@ -181,12 +181,12 @@ def pxe_tsize(t):
     for options in (('blksize',), ()):
         m = boot(options)
         if t.port.is_uefi:
-            t.expect_eq(boot_outcome(t, m), 'no config', f'[spec] options {options}: limine.conf, its size '
+            t.expect_eq(boot_outcome(t, m), 'no config', f'[spec] options {options}: initium.conf, its size '
                         'unreported, missing')
         else:
             msg, scr = wait_panic(t, m, timeout=120)
             t.check('Stage 3 file not found' in screen_text(scr) and 'Failed to load stage 3' in msg,
-                    f'[spec] options {options}: limine-bios.sys, its size unreported, missing: {msg}')
+                    f'[spec] options {options}: initium-bios.sys, its size unreported, missing: {msg}')
         m.stop()
 
 
@@ -203,7 +203,7 @@ def pxe_tftp_errors(t):
     config = 'timeout: no\n' + ''.join(
         entry(f'E{i}', path='boot():/boot/kernel.elf', cmdline='x', modules=[(path, None)])
         for i, (path, _) in enumerate(cases))
-    m = pxe_boot(t, {'/limine.conf': config}, {'/boot/kernel.elf': HostFile(kernel_file(t, 'full')),
+    m = pxe_boot(t, {'/initium.conf': config}, {'/boot/kernel.elf': HostFile(kernel_file(t, 'full')),
                                                '/m.bin': b'module\n', long_name: b'long\n'})
     msgs = panics_in_turn(t, m, [f'E{i}' for i in range(len(cases))], timeout=120)
     for (path, want), got in zip(cases, msgs):

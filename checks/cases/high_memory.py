@@ -7,7 +7,7 @@ from cases._common import boot_kernel, check_report_clean, entry
 
 # Memory above 4GiB as the Limine protocol's modules can use it; with the RAM
 # below 4GiB cut to 128MiB, modules larger than that are loaded above it.
-# The 32-bit ports reach it only through Limine's 64-bit copy routines.
+# The 32-bit ports reach it only through Initium's 64-bit copy routines.
 
 LOW_RAM = 128 << 20
 PERIOD = bytes((i * 7 + 3) % 251 for i in range(251))

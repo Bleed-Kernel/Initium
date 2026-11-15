@@ -1,4 +1,3 @@
-#if defined(__x86_64__) || defined(__i386__)
 
 #include <stdint.h>
 #include <stddef.h>
@@ -29,7 +28,7 @@
 #include <drivers/vga_textmode.h>
 #include <pxe/pxe.h>
 
-#define LIMINE_BRAND "Limine " LIMINE_VERSION
+#define INITIUM_BRAND "Initium " INITIUM_VERSION
 
 #define MEMMAP_MAX 256
 #define EFI_MEMMAP_MAX 1024
@@ -44,7 +43,7 @@ static size_t get_multiboot2_info_size(
 #define OVERFLOW panic(true, "multiboot2: info size overflow")
     return ALIGN_UP(sizeof(struct multiboot2_start_tag), MULTIBOOT_TAG_ALIGN, OVERFLOW) +
         ALIGN_UP(sizeof(struct multiboot_tag_string) + strlen(cmdline) + 1, MULTIBOOT_TAG_ALIGN, OVERFLOW) +
-        ALIGN_UP(sizeof(struct multiboot_tag_string) + sizeof(LIMINE_BRAND), MULTIBOOT_TAG_ALIGN, OVERFLOW) +
+        ALIGN_UP(sizeof(struct multiboot_tag_string) + sizeof(INITIUM_BRAND), MULTIBOOT_TAG_ALIGN, OVERFLOW) +
         ALIGN_UP(sizeof(struct multiboot_tag_framebuffer), MULTIBOOT_TAG_ALIGN, OVERFLOW) +
         ALIGN_UP(sizeof(struct multiboot_tag_new_acpi) + sizeof(struct rsdp), MULTIBOOT_TAG_ALIGN, OVERFLOW) +
         ALIGN_UP(sizeof(struct multiboot_tag_old_acpi) + 20, MULTIBOOT_TAG_ALIGN, OVERFLOW) +
@@ -840,13 +839,13 @@ reloc_fail:
     // Create bootloader name tag
     //////////////////////////////////////////////
     {
-        uint32_t size = sizeof(struct multiboot_tag_string) + sizeof(LIMINE_BRAND);
+        uint32_t size = sizeof(struct multiboot_tag_string) + sizeof(INITIUM_BRAND);
         struct multiboot_tag_string *tag = (struct multiboot_tag_string *)(mb2_info + info_idx);
 
         tag->type = MULTIBOOT_TAG_TYPE_BOOT_LOADER_NAME;
         tag->size = size;
 
-        strcpy(tag->string, LIMINE_BRAND);
+        strcpy(tag->string, INITIUM_BRAND);
         append_tag(info_idx, tag);
     }
 
@@ -1200,4 +1199,3 @@ skip_modeset:;
                   (uint32_t)(uintptr_t)ranges, (uint32_t)ranges_count);
 }
 
-#endif

@@ -1,4 +1,3 @@
-#if defined(__x86_64__) || defined(__i386__)
 
 #include <stdint.h>
 #include <stddef.h>
@@ -29,7 +28,7 @@ noreturn void linux_spinup(void *entry, void *boot_params);
     noreturn void linux_spinup64(void *entry, void *boot_params);
 #endif
 
-// Fields Limine leaves alone are reserved bytes, named after where they sit in
+// Fields Initium leaves alone are reserved bytes, named after where they sit in
 // the zero page.
 
 // Linux Documentation/arch/x86/boot.rst, "The Real-Mode Kernel Header".
@@ -804,4 +803,3 @@ no_fb:;
                                 (uint32_t)(uintptr_t)boot_params);
 }
 
-#endif

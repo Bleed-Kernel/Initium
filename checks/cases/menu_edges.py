@@ -10,9 +10,9 @@ from cases.menu import (KERNEL, boot_menu, booted_cmdline, entry_cells, menu_ent
 
 # The menu and the editor at their edges: what does not fit the screen, keys
 # beyond the arrows, entries that cannot boot. What the code alone decides is
-# [intent]; Limine's terminal draws the box and arrow characters from CP437.
+# [intent]; Initium's terminal draws the box and arrow characters from CP437.
 
-# Limine's terminal palette for the editor's ANSI colours.
+# Initium's terminal palette for the editor's ANSI colours.
 CYAN, GREEN, RED, BROWN, GREY = 0x00aaaa, 0x00aa00, 0xaa0000, 0xaa5500, 0xaaaaaa
 
 
@@ -90,15 +90,12 @@ def menu_blank_entry(t):
 
 @check(ports=ALL_PORTS, tags=['menu', 'hostile'])
 def menu_protocol_errors(t):
-    """An entry without a protocol, or with one Limine does not know or this
+    """An entry without a protocol, or with one Initium does not know or this
     port does not boot, is refused, and the menu comes back; one for the
     other firmware's chainloading is not listed at all [intent]."""
     foreign = 'efi' if t.port.name == 'bios' else 'bios'
     cases = [('/No protocol\n    path: boot():/boot/kernel.elf\n', 'Boot protocol not specified for this entry'),
              ('/Unknown\n    protocol: nonsense\n', 'Unsupported protocol specified.')]
-    if not t.port.is_x86:
-        cases += [('/MB1\n    protocol: multiboot1\n', 'Unsupported protocol specified.'),
-                  ('/MB2\n    protocol: multiboot2\n', 'Unsupported protocol specified.')]
     m = boot_menu(t, 'timeout: no\n' + ''.join(text for text, _ in cases)
                   + f'/Foreign\n    protocol: {foreign}\n')
     t.check('Foreign' not in screen_text(wait_menu(t, m)), f'the {foreign} entry not listed')
@@ -106,10 +103,8 @@ def menu_protocol_errors(t):
         wait_menu(t, m)
         m.press('home', *['down'] * i, delay=0.05)
         m.press('ret')
-        msg, scr = wait_panic(t, m)
+        msg, _ = wait_panic(t, m)
         t.expect_eq(msg, want, text.split('\n')[0])
-        if 'multiboot' in text:
-            t.check('is not available on non-x86 architectures' in screen_text(scr), 'says why')
         m.press('ret')
 
 
@@ -194,7 +189,7 @@ def menu_editor_limits(t):
 @check(ports=ALL_PORTS, tags=['menu'])
 def menu_editor_highlighting(t):
     """The editor colours a known key cyan, its colon green, a value in the
-    default colour, a key Limine does not know red, and a comment brown
+    default colour, a key Initium does not know red, and a comment brown
     [intent]; editor_validation: no colours every key as known, and
     editor_highlighting: no colours nothing."""
     entry = editor_entry('v', '    bogus_key: 1\n    # a comment\n')

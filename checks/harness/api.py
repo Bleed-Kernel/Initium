@@ -5,7 +5,7 @@ import traceback
 
 from harness import media
 from harness.media import Disk, Part, Fat, Iso, HostFile, Tree, ESP_TYPE
-from harness.ports import PORTS, MachineSpec, Drive, build_machine, qemu_version
+from harness.ports import PORTS, MachineSpec, Drive, build_machine
 from harness.report import Report
 from harness.tpm import SoftwareTpm
 from harness.bootserver import BootServer
@@ -16,7 +16,7 @@ from harness import vt as vt_mod
 REGISTRY = []
 
 
-EFI_NAMES = ['BOOTX64.EFI', 'BOOTIA32.EFI', 'BOOTAA64.EFI', 'BOOTRISCV64.EFI', 'BOOTLOONGARCH64.EFI']
+EFI_NAMES = ['BOOTX64.EFI', 'BOOTIA32.EFI']
 
 # Seconds between a screenshot that shows what is waited for and the one that
 # confirms it.
@@ -116,14 +116,14 @@ class Context:
 
     # Media
 
-    def limine_files(self, config=None, tree=None, conf_path='/boot/limine.conf',
-                     bios_sys_path='/boot/limine-bios.sys', efi_path=None):
+    def limine_files(self, config=None, tree=None, conf_path='/boot/initium.conf',
+                     bios_sys_path='/boot/initium-bios.sys', efi_path=None):
         """A tree with what booting this port from a disk needs, plus config."""
         tree = tree or Tree()
         if self.port.is_uefi:
             tree.add(efi_path or ('/EFI/BOOT/' + self.port.efi_name), HostFile(self.env.bin(self.port.efi_name)))
         elif bios_sys_path is not None:
-            tree.add(bios_sys_path, HostFile(self.env.bin('limine-bios.sys')))
+            tree.add(bios_sys_path, HostFile(self.env.bin('initium-bios.sys')))
         if config is not None and conf_path is not None:
             tree.add(conf_path, config)
         return tree
@@ -165,12 +165,12 @@ class Context:
         self.counter += 1
         name = name or f'cd{self.counter}.iso'
         if hybrid:
-            self.skip_unless_built('limine-uefi-cd.bin' if self.port.is_uefi else 'limine-bios-cd.bin')
+            self.skip_unless_built('initium-uefi-cd.bin' if self.port.is_uefi else 'initium-bios-cd.bin')
             # As much of it as the ports the build has make.
-            bios = os.path.exists(self.env.bin('limine-bios-cd.bin'))
-            uefi = os.path.exists(self.env.bin('limine-uefi-cd.bin'))
+            bios = os.path.exists(self.env.bin('initium-bios-cd.bin'))
+            uefi = os.path.exists(self.env.bin('initium-uefi-cd.bin'))
             if bios:
-                tree.add('/boot/limine-bios.sys', HostFile(self.env.bin('limine-bios.sys')))
+                tree.add('/boot/initium-bios.sys', HostFile(self.env.bin('initium-bios.sys')))
             for efi in EFI_NAMES:
                 if os.path.exists(self.env.bin(efi)):
                     tree.add('/EFI/BOOT/' + efi, HostFile(self.env.bin(efi)))
@@ -178,15 +178,15 @@ class Context:
             bios = (not self.port.is_uefi) if bios is None else bios
             uefi = self.port.is_uefi if uefi is None else uefi
             if bios:
-                self.skip_unless_built('limine-bios-cd.bin')
+                self.skip_unless_built('initium-bios-cd.bin')
             if uefi:
-                self.skip_unless_built('limine-uefi-cd.bin')
+                self.skip_unless_built('initium-uefi-cd.bin')
         if bios:
-            tree.add('/boot/limine-bios-cd.bin', HostFile(self.env.bin('limine-bios-cd.bin')))
+            tree.add('/boot/initium-bios-cd.bin', HostFile(self.env.bin('initium-bios-cd.bin')))
         if uefi:
-            tree.add('/boot/limine-uefi-cd.bin', HostFile(self.env.bin('limine-uefi-cd.bin')))
-        iso = Iso(tree, bios_boot='/boot/limine-bios-cd.bin' if bios else None,
-                  uefi_boot='/boot/limine-uefi-cd.bin' if uefi else None, hybrid=hybrid, **kwargs)
+            tree.add('/boot/initium-uefi-cd.bin', HostFile(self.env.bin('initium-uefi-cd.bin')))
+        iso = Iso(tree, bios_boot='/boot/initium-bios-cd.bin' if bios else None,
+                  uefi_boot='/boot/initium-uefi-cd.bin' if uefi else None, hybrid=hybrid, **kwargs)
         path = self.path(name)
         iso.build(path, self.workdir)
         if hybrid and bios:
@@ -198,8 +198,6 @@ class Context:
 
     def software_tpm(self):
         """A TPM 2.0 for machines of this check to use, stopped with them."""
-        if self.port.name == 'uefi-loongarch64' and qemu_version(self.port.qemu) < (10, 0):
-            self.skip('QEMU before 10.0 shows loongarch64 firmware no TPM')
         tpm = SoftwareTpm(self.workdir)
         self.tpms.append(tpm)
         return tpm
@@ -233,7 +231,7 @@ class Context:
         the TFTP options to support, from a BootServer, as the machine's
         boot_server."""
         if not self.port.is_uefi:
-            self.skip_unless_built('limine-bios-pxe.bin')
+            self.skip_unless_built('initium-bios-pxe.bin')
         self.counter += 1
         root = self.path(f'tftp{self.counter}')
         tree.materialise(root)
@@ -287,7 +285,7 @@ class Context:
 
     def decode(self, m, img, rotate=0, **kwargs):
         """The text on screen: VGA text memory when the adapter shows 80x25
-        text (720x400), Limine's graphical terminal otherwise, read after
+        text (720x400), Initium's graphical terminal otherwise, read after
         turning the picture rotate degrees clockwise."""
         if not self.port.is_uefi and (img.width, img.height) == (720, 400):
             return screen_mod.decode_vga_text(m.read_phys(0xb8000, 80 * 25 * 2))
@@ -297,14 +295,14 @@ class Context:
         return self.decode(m, m.screendump(name), **kwargs)
 
     def firmware_screen(self, m, name=None):
-        """The text edk2's own console shows, which UEFI Limine prints through
+        """The text edk2's own console shows, which UEFI Initium prints through
         before, or instead of, a terminal of its own."""
         return screen_mod.decode_efi_console(m.screendump(name), m.firmware)
 
     def wait_screen(self, m, predicate, timeout=30, interval=0.5, desc='screen condition',
                     firmware=False, **kwargs):
         """Poll screenshots until predicate(text_screen) holds. firmware reads
-        them as edk2's console rather than Limine's terminal."""
+        them as edk2's console rather than Initium's terminal."""
         def poll():
             img = m.screendump('poll')
             try:

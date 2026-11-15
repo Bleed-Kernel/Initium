@@ -7,9 +7,9 @@ from harness.screen import Font, builtin_font
 from cases._common import screen_text
 from cases.menu import boot_menu, entry_cells, menu_entry
 
-# Limine's graphical terminal as CONFIG.md's interface and graphical terminal
+# Initium's graphical terminal as CONFIG.md's interface and graphical terminal
 # options shape it, read back off the screen dot by dot. [intent] marks what
-# only Limine's or Flanterm's code says.
+# only Initium's or Flanterm's code says.
 
 
 def menu(globals_=''):
@@ -197,7 +197,7 @@ def gterm_wallpaper_style(t):
 @check(ports=ALL_PORTS, tags=['gterm'])
 def gterm_resolution(t):
     """interface_resolution picks the screen's resolution for the menu; one
-    that is not available leaves Limine to pick another."""
+    that is not available leaves Initium to pick another."""
     for res in ('800x600', '640x480'):
         m = boot_menu(t, menu(f'interface_resolution: {res}\n'))
         t.wait_text(m, 'ARROWS')

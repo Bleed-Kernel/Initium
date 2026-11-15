@@ -14,8 +14,8 @@
 #include <inttypes.h>
 #include <limits.h>
 
-#ifndef LIMINE_NO_BIOS
-#include "limine-bios-hdd.h"
+#ifndef INITIUM_NO_BIOS
+#include "initium-bios-hdd.h"
 #endif
 
 static char *program_name = NULL;
@@ -45,7 +45,7 @@ static void remove_arg(int *argc, char *argv[], int index) {
     argv[*argc] = NULL;
 }
 
-#ifndef LIMINE_NO_BIOS
+#ifndef INITIUM_NO_BIOS
 
 static inline bool mul_u64_overflow(uint64_t a, uint64_t b, uint64_t *res) {
     *res = a * b;
@@ -1812,11 +1812,11 @@ cleanup:
         fprintf(stderr, "Install failed, undoing work...\n");
         uninstall(true);
     } else if (!quiet) {
-        fprintf(stderr, "Reminder: Remember to copy the limine-bios.sys file in either\n"
-                        "          the root, /boot, /limine, or /boot/limine directories of\n"
+        fprintf(stderr, "Reminder: Remember to copy the initium-bios.sys file in either\n"
+                        "          the root, /boot, /initium, or /boot/initium directories of\n"
                         "          one of the partitions on the device, or boot will fail!\n");
 
-        fprintf(stderr, "Limine BIOS stages installed successfully.\n");
+        fprintf(stderr, "Initium BIOS stages installed successfully.\n");
     }
 uninstall_mode_cleanup:
     free_uninstall_data();
@@ -1838,7 +1838,7 @@ uninstall_mode_cleanup:
 #define CONFIG_B2SUM_SIGNATURE "++CONFIG_B2SUM_SIGNATURE++"
 
 static void enroll_config_usage(void) {
-    printf("usage: %s enroll-config <Limine executable> <BLAKE2B of config file>\n", program_name);
+    printf("usage: %s enroll-config <Initium executable> <BLAKE2B of config file>\n", program_name);
     printf("\n");
     printf("    --reset      Remove enrolled BLAKE2B, will not check config integrity\n");
     printf("\n");
@@ -1999,8 +1999,8 @@ cleanup:
     return ret;
 }
 
-#define LIMINE_VERSION "%VERSION%"
-#define LIMINE_COPYRIGHT "%COPYRIGHT%"
+#define INITIUM_VERSION "%VERSION%"
+#define INITIUM_COPYRIGHT "%COPYRIGHT%"
 
 static void version_usage(void) {
     printf("usage: %s version [options...]\n", program_name);
@@ -2028,13 +2028,13 @@ static int version(int argc, char *argv[]) {
     }
 
     if (version_only) {
-        puts(LIMINE_VERSION);
+        puts(INITIUM_VERSION);
         return EXIT_SUCCESS;
     }
 
-    puts("Limine " LIMINE_VERSION);
-    puts(LIMINE_COPYRIGHT);
-    puts("Limine is distributed under the terms of the BSD-2-Clause license.");
+    puts("Initium " INITIUM_VERSION);
+    puts(INITIUM_COPYRIGHT);
+    puts("Initium is distributed under the terms of the BSD-2-Clause license.");
     puts("There is ABSOLUTELY NO WARRANTY, to the extent permitted by law.");
     return EXIT_SUCCESS;
 }
@@ -2044,7 +2044,7 @@ static void general_usage(void) {
     printf("\n");
     printf("    --print-datadir   Print the directory containing the bootloader files\n");
     printf("\n");
-    printf("    --version         Print the Limine version (like the `version` command)\n");
+    printf("    --version         Print the Initium version (like the `version` command)\n");
     printf("\n");
     printf("    --help | -h       Display this help message\n");
     printf("\n");
@@ -2053,11 +2053,11 @@ static void general_usage(void) {
 }
 
 static int print_datadir(void) {
-#ifdef LIMINE_DATADIR
-    puts(LIMINE_DATADIR);
+#ifdef INITIUM_DATADIR
+    puts(INITIUM_DATADIR);
     return EXIT_SUCCESS;
 #else
-    fprintf(stderr, "error: Cannot print datadir for `limine` built standalone.\n");
+    fprintf(stderr, "error: Cannot print datadir for `initium` built standalone.\n");
     return EXIT_FAILURE;
 #endif
 }
@@ -2076,10 +2076,10 @@ int main(int argc, char *argv[]) {
         general_usage();
         return EXIT_SUCCESS;
     } else if (strcmp(argv[1], "bios-install") == 0) {
-#ifndef LIMINE_NO_BIOS
+#ifndef INITIUM_NO_BIOS
         return bios_install(argc - 1, &argv[1]);
 #else
-        fprintf(stderr, "error: Limine has been compiled without BIOS support.\n");
+        fprintf(stderr, "error: Initium has been compiled without BIOS support.\n");
         return EXIT_FAILURE;
 #endif
     } else if (strcmp(argv[1], "enroll-config") == 0) {

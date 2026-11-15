@@ -16,7 +16,7 @@ def socket_dir():
     base = tempfile.gettempdir()
     if len(base) > 64:
         base = '/tmp'
-    return tempfile.mkdtemp(prefix='limine-check-', dir=base)
+    return tempfile.mkdtemp(prefix='initium-check-', dir=base)
 
 
 def qemu_version(qemu):
@@ -46,9 +46,9 @@ class Port:
         # Where the payloads write: 'debugcon' (x86 port 0xe9) or 'serial'.
         self.kernel_out = kernel_out
         self.limine_arch = limine_arch or arch
-        # LIMINE_CHECK_SLOWDOWN stretches every timeout, for slow hosts and
+        # INITIUM_CHECK_SLOWDOWN stretches every timeout, for slow hosts and
         # instrumented runs.
-        self.timeout_scale = timeout_scale * float(os.environ.get('LIMINE_CHECK_SLOWDOWN', '1'))
+        self.timeout_scale = timeout_scale * float(os.environ.get('INITIUM_CHECK_SLOWDOWN', '1'))
 
     @property
     def is_uefi(self):
@@ -71,20 +71,6 @@ PORTS = {
     'uefi-x86-64': Port('uefi-x86-64', 'x86-64', 'uefi', 'qemu-system-x86_64',
                         efi_name='BOOTX64.EFI', shell_name='shellx64.efi',
                         code='ovmf-code-x86_64.fd', vars='ovmf-vars-x86_64.fd'),
-    'uefi-aarch64': Port('uefi-aarch64', 'aarch64', 'uefi', 'qemu-system-aarch64',
-                         efi_name='BOOTAA64.EFI', shell_name='shellaa64.efi',
-                         code='ovmf-code-aarch64.fd', vars='ovmf-vars-aarch64.fd',
-                         machine='virt', cpu='cortex-a72', kernel_out='serial',
-                         timeout_scale=2.0),
-    'uefi-riscv64': Port('uefi-riscv64', 'riscv64', 'uefi', 'qemu-system-riscv64',
-                         efi_name='BOOTRISCV64.EFI', shell_name='shellriscv64.efi',
-                         code='ovmf-code-riscv64.fd', vars='ovmf-vars-riscv64.fd',
-                         machine='virt', cpu='rv64', kernel_out='serial', timeout_scale=2.0),
-    'uefi-loongarch64': Port('uefi-loongarch64', 'loongarch64', 'uefi', 'qemu-system-loongarch64',
-                             efi_name='BOOTLOONGARCH64.EFI', shell_name='shellloongarch64.efi',
-                             code='ovmf-code-loongarch64.fd', vars='ovmf-vars-loongarch64.fd',
-                             memory='1G', machine='virt', cpu='la464', kernel_out='serial',
-                             timeout_scale=2.0),
 }
 
 UEFI_PORTS = [p for p in PORTS if PORTS[p].is_uefi]

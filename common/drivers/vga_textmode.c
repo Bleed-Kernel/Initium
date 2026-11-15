@@ -344,7 +344,7 @@ void vga_textmode_init(bool managed) {
     // CC0, and was never confirmed to have been opted into it. If you wrote it
     // and want it removed, or are fine with it being CC0, please open an
     // issue at:
-    // https://github.com/Limine-Bootloader/Limine/issues
+    // https://github.com/Bleed-Kernel/Initium/issues
 
     if (!managed) {
         term->cursor_enabled = false;

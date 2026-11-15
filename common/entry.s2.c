@@ -42,10 +42,10 @@ static bool stage3_init(struct volume *part) {
     bool old_cif = case_insensitive_fopen;
     case_insensitive_fopen = true;
     if (true
-     && (stage3 = fopen(part, "/boot/limine/limine-bios.sys")) == NULL
-     && (stage3 = fopen(part, "/boot/limine-bios.sys")) == NULL
-     && (stage3 = fopen(part, "/limine/limine-bios.sys")) == NULL
-     && (stage3 = fopen(part, "/limine-bios.sys")) == NULL
+     && (stage3 = fopen(part, "/boot/initium/initium-bios.sys")) == NULL
+     && (stage3 = fopen(part, "/boot/initium-bios.sys")) == NULL
+     && (stage3 = fopen(part, "/initium/initium-bios.sys")) == NULL
+     && (stage3 = fopen(part, "/initium-bios.sys")) == NULL
     ) {
         case_insensitive_fopen = old_cif;
         return false;
@@ -55,7 +55,7 @@ static bool stage3_init(struct volume *part) {
     stage3_found = true;
 
     if (stage3->size != (size_t)limine_bios_sys_size) {
-        print("limine-bios.sys size incorrect.\n");
+        print("initium-bios.sys size incorrect.\n");
         fclose(stage3);
         return false;
     }
@@ -67,7 +67,7 @@ static bool stage3_init(struct volume *part) {
     fclose(stage3);
 
     if (memcmp(build_id_s2 + 16, build_id_s3 + 16, 20) != 0) {
-        print("limine-bios.sys build ID mismatch.\n");
+        print("initium-bios.sys build ID mismatch.\n");
         return false;
     }
 
@@ -118,7 +118,7 @@ noreturn void entry(uint8_t boot_drive, int boot_from) {
     if (!stage3_found) {
         print("\n"
               "!! Stage 3 file not found!\n"
-              "!! Have you copied limine-bios.sys to the root, /boot, /limine, or /boot/limine\n"
+              "!! Have you copied initium-bios.sys to the root, /boot, /initium, or /boot/initium\n"
               "!! directories of one of the partitions on the boot device?\n\n");
     }
 

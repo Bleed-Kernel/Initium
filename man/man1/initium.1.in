@@ -1,0 +1,13 @@
+.TH INITIUM 1 "version @PACKAGE_VERSION@" "@REGEN_DATE@"
+.SH NAME
+initium \- Multiplexer to several Initium-related utilities.
+.SH SYNOPSIS
+.B initium
+.RI "<command> <args...>"
+.SH DESCRIPTION
+\fBlimine\fR provides a series of Initium-related utilities condensed in a single executable.
+.SH BUGS
+Please report bugs via
+.IR @PACKAGE_BUGREPORT@ .
+.SH HOMEPAGE
+.I @PACKAGE_URL@

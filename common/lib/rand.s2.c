@@ -39,7 +39,6 @@ size_t hw_entropy(void *buf, size_t size) {
     uint8_t *out = buf;
     size_t filled = 0;
 
-#if defined(__x86_64__) || defined(__i386__)
     uint32_t eax, ebx, ecx, edx;
     bool have_rdseed = cpuid(0x07, 0, &eax, &ebx, &ecx, &edx) && (ebx & (1 << 18));
     bool have_rdrand = cpuid(0x01, 0, &eax, &ebx, &ecx, &edx) && (ecx & (1 << 30));
@@ -88,32 +87,6 @@ size_t hw_entropy(void *buf, size_t size) {
         memcpy(out + filled, &val, chunk);
         filled += chunk;
     }
-#elif defined(__aarch64__)
-    // ARMv8.5-RNG: check ID_AA64ISAR0_EL1 RNDR field (bits [63:60])
-    uint64_t isar0;
-    asm volatile ("mrs %0, id_aa64isar0_el1" : "=r" (isar0));
-    if ((isar0 >> 60) & 0xf) {
-        while (filled < size) {
-            uint64_t rndr;
-            bool ok;
-            // RNDR register: s3_3_c2_c4_0
-            asm volatile (
-                "mrs %0, s3_3_c2_c4_0\n\t"
-                "cset %w1, ne"
-                : "=r" (rndr), "=r" (ok)
-                :
-                : "cc"
-            );
-            if (!ok) {
-                break;
-            }
-
-            size_t chunk = size - filled < sizeof(rndr) ? size - filled : sizeof(rndr);
-            memcpy(out + filled, &rndr, chunk);
-            filled += chunk;
-        }
-    }
-#endif
 
 #if defined(UEFI)
     // Try the EFI RNG protocol as a fallback for any bytes still missing.

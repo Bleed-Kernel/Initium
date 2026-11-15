@@ -11,10 +11,10 @@ from cases._common import (boot_entry, check_report_clean, countdown_start, entr
                            screen_text, wait_panic)
 from cases.menu import booted_cmdline, menu_entry, nothing_booted, tree_menu
 
-# What only UEFI Limine does: the Boot Loader Interface (systemd.io's document,
+# What only UEFI Initium does: the Boot Loader Interface (systemd.io's document,
 # which carries no version; CONFIG.md for how it ranks against the config),
 # efi_boot_entry, and the firmware setup and UEFI Shell keys. [intent] marks
-# what only Limine's code says, such as how it derives entry identifiers.
+# what only Initium's code says, such as how it derives entry identifiers.
 
 PROBE = 'boot():/probe.efi'
 
@@ -25,7 +25,7 @@ def probe_file(t):
 
 
 def uefi_boot(t, config, variables=(), files=None, **machine):
-    """Boot Limine with config from a disk holding the check executable and the
+    """Boot Initium with config from a disk holding the check executable and the
     probe, on a store with variables set; return (machine, disk)."""
     tree = Tree()
     tree.add('/boot/kernel.elf', HostFile(kernel_file(t, 'full')))
@@ -63,7 +63,7 @@ def probe_entry(level, title, commands):
 
 @check(ports=UEFI_PORTS, tags=['uefi'])
 def uefi_bli_loader_variables(t):
-    """The variables Limine sets for the OS: the ESP it ran from, when it
+    """The variables Initium sets for the OS: the ESP it ran from, when it
     started and handed over, its entries in menu order and the one booted."""
     config = ('timeout: 0\ndefault_entry: Dir/Probe\n' + menu_entry(1, 'First', 'first') + menu_entry(1, '+Dir')
               + probe_entry(2, 'Probe', f'vendor:{LOADER}') + menu_entry(1, 'Last', 'last'))
@@ -78,7 +78,7 @@ def uefi_bli_loader_variables(t):
     t.expect_eq(entries and entries.decode('utf-16-le').split('\0')[:-1], ['First', 'Dir.Probe', 'Last'],
                 '[spec] LoaderEntries in menu order ([intent] identifiers from the entry paths)')
     t.expect_eq(var_text(r, 'LoaderEntrySelected'), 'Dir.Probe', '[spec] LoaderEntrySelected: the entry booted')
-    t.expect_eq(var_text(r, 'LoaderInfo'), f'Limine {limine_version(t.env)}', '[intent] LoaderInfo')
+    t.expect_eq(var_text(r, 'LoaderInfo'), f'Initium {limine_version(t.env)}', '[intent] LoaderInfo')
     features = var_data(r, 'LoaderFeatures')
     t.expect_eq(features and struct.unpack('<Q', features)[0], 0b10000000001111,
                 '[intent] LoaderFeatures: timeouts, entries, one-shots and menu-disabled')
@@ -114,7 +114,7 @@ def uefi_bli_entry_ids(t):
     not hold made a dash: a second entry of the same name is Twin#1, so
     Twin-1; names that come out alike, as A B and A-B do, number the later
     one; one that comes out as . or .. gets a dash. LoaderEntryDefault may
-    hold an entry path instead, as an older Limine wrote it."""
+    hold an entry path instead, as an older Initium wrote it."""
     config = ('timeout: 0\ndefault_entry: 4\n' + menu_entry(1, 'Twin', 'one') + menu_entry(1, 'Twin', 'two')
               + menu_entry(1, 'A B', 'space') + probe_entry(1, 'A-B', f'vendor:{LOADER}') + menu_entry(1, '.', 'dot')
               + menu_entry(1, '..', 'dotdot') + menu_entry(1, '+Dir') + menu_entry(2, 'Second', 'second'))
@@ -216,16 +216,16 @@ def uefi_efi_boot_entry(t):
     is entry, [intent] matched regardless of case; [intent] it panics when
     there is no such option or no entry option."""
     option = load_option('Probe Boot Entry', '\\probe.efi', utf16z('name:bootnext'))
-    limine = load_option('Limine', '\\EFI\\BOOT\\' + t.port.efi_name)
+    limine = load_option('Initium', '\\EFI\\BOOT\\' + t.port.efi_name)
     config = 'timeout: 0\n/Next\n    protocol: efi_boot_entry\n    entry: probe boot ENTRY\n'
-    # Limine's own option first: the probe's, which the firmware's
+    # Initium's own option first: the probe's, which the firmware's
     # expansion ties to the same disk, would otherwise run first.
     m, _ = uefi_boot(t, config, [('Boot0001', GLOBAL, limine), ('Boot0042', GLOBAL, option),
                                  ('BootOrder', GLOBAL, struct.pack('<HH', 0x1, 0x42))], no_reboot=False)
     m.wait_for(t.kernel_channel, 'K name=bootnext', 120)
     # The events that came in meanwhile are read with the next reply.
     m.qmp.cmd('query-status')
-    t.check(any(e['event'] == 'RESET' for e in m.qmp.events), 'the probe started after a reboot, not instead of Limine')
+    t.check(any(e['event'] == 'RESET' for e in m.qmp.events), 'the probe started after a reboot, not instead of Initium')
     m.stop()
     for entry_line, message in (('    entry: Nope\n', "efi_boot_entry: Failed to find boot entry 'Nope'"),
                                 ('', 'efi_boot_entry: No entry specified')):
@@ -268,7 +268,7 @@ def uefi_firmware_logo(t):
     """firmware_logo: yes clears the BGRT's displayed bit, for the OS to draw
     the logo again, and centres the logo for the resolution the kernel gets;
     without it the table is left as the firmware made it (CONFIG.md), as it
-    is for a kernel whose screen Limine keeps, one asking for the terminal's
+    is for a kernel whose screen Initium keeps, one asking for the terminal's
     parameters [intent]. The table's checksum stays right [spec: ACPI 6.6
     5.2.23]."""
     for logo, variant, resolution, restored in ((False, 'noflanterm', None, False),
@@ -297,7 +297,7 @@ def uefi_firmware_logo(t):
 @check(ports=UEFI_PORTS, tags=['uefi', 'hostile'])
 def uefi_watchdog_not_disabled(t):
     """Firmware that will not disable its watchdog, here made so by the EFI
-    probe that starts Limine, has Limine warn and go on [intent]."""
+    probe that starts Initium, has Initium warn and go on [intent]."""
     from cases.chainload import probe_then_limine
     m = probe_then_limine(t, 'name:wd wdfail', 'timeout: 0\n' + entry('Test', path='boot():/boot/kernel.elf',
                                                                        cmdline='x'),

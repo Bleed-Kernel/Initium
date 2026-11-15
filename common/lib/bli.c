@@ -10,7 +10,7 @@
 #include <lib/misc.h>
 #include <menu.h>
 
-#define LIMINE_BRAND L"Limine " LIMINE_VERSION
+#define INITIUM_BRAND L"Initium " INITIUM_VERSION
 
 static struct efi_guid bli_vendor_guid = { 0x4a67b082, 0x0a4c, 0x41cf, { 0xb6, 0xc7, 0x44, 0x0b, 0x29, 0xbb, 0x8c, 0x4f } };
 
@@ -92,8 +92,8 @@ void init_bli(void) {
     gRT->set_variable(L"LoaderInfo",
             &bli_vendor_guid,
             EFI_VARIABLE_BOOTSERVICE_ACCESS | EFI_VARIABLE_RUNTIME_ACCESS,
-            sizeof(LIMINE_BRAND),
-            LIMINE_BRAND);
+            sizeof(INITIUM_BRAND),
+            INITIUM_BRAND);
 
     uint64_t features = (1 << 0) | // Timeout control
                         (1 << 1) | // Oneshot timeout control

@@ -34,12 +34,10 @@ static struct flanterm_context *post_ebs_term = NULL;
 int term_backend = _NOT_READY;
 
 void term_notready(void) {
-#if defined(__i386__) || defined(__x86_64__)
 #if defined(__x86_64__) && defined(UEFI)
     efi_pt_restore();
 #else
     mtrr_restore();
-#endif
 #endif
 
     for (size_t i = 0; i < terms_i; i++) {

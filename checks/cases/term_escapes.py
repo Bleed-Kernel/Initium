@@ -2,7 +2,7 @@ from harness.api import check
 from harness.ports import ALL_PORTS
 from cases.menu import boot_menu, booted_cmdline, menu_entry, wait_menu
 
-# Limine's terminal interprets control sequences (ECMA-48 5th edition) in what
+# Initium's terminal interprets control sequences (ECMA-48 5th edition) in what
 # it prints, config strings included: here, in the branding. In VGA text mode
 # colours are attribute nibbles, bright meaning the intensity bit [spec: the
 # VGA registers volume of Intel's 2011 graphics PRM, revision 1.0, SR03 and

@@ -403,7 +403,7 @@ static void pmm_claim_uefi_pages(efi_physical_address base, size_t page_count) {
     }
 }
 
-// Some firmware, edk2 for RISC-V among it, describes part of the stack it runs
+// Some firmware describes part of the stack it runs
 // us on as conventional memory. Claimed, it would be freed back before
 // chainloading and the firmware would clobber live frames, so the 128KiB of
 // stack UEFI 2.11 section 2.3 guarantees below ours, and frames above it,
@@ -788,9 +788,6 @@ void *ext_mem_alloc_type_aligned(uint64_t count, uint32_t type, size_t alignment
 
 // Allocate memory top down.
 static void *ext_mem_alloc_impl(uint64_t count, uint32_t type, size_t alignment, bool allow_high_allocs, bool do_panic) {
-#if !defined(__x86_64__) && !defined(__i386__)
-    (void)allow_high_allocs;
-#endif
 
     // A zero-size request must still own storage: at zero the reservation
     // below is a no-op, and the pointer returned aliases whatever already
@@ -806,15 +803,11 @@ static void *ext_mem_alloc_impl(uint64_t count, uint32_t type, size_t alignment,
     if (allocations_disallowed)
         panic(false, "Memory allocations disallowed");
 
-#if defined(__x86_64__) || defined(__i386__)
     // Try below 4GiB first to avoid relying on firmware identity-mapping
     // memory above 4GiB (some buggy UEFI implementations don't).
     uint64_t limit = 0x100000000;
 
 again:
-#else
-    uint64_t limit = UINT64_MAX;
-#endif
 
     for (int i = memmap_entries - 1; i >= 0; i--) {
         if (memmap[i].type != 1)
@@ -864,12 +857,10 @@ again:
         return ret;
     }
 
-#if defined(__x86_64__) || defined(__i386__)
     if (allow_high_allocs && limit < UINT64_MAX) {
         limit = UINT64_MAX;
         goto again;
     }
-#endif
 
     if (!do_panic) {
         return NULL;

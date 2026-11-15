@@ -10,7 +10,7 @@ from cases._common import boot_entry, check_report_clean, entry, kernel_file, sc
 from cases.chainload import probe_then_limine
 from cases.multiboot import mb1_kernel, mb1_report, mb2_kernel, mb2_report
 
-# What Limine knows of machines' framebuffers beyond what their firmware says,
+# What Initium knows of machines' framebuffers beyond what their firmware says,
 # by the SMBIOS strings common/lib/fb_quirks.c lists the machines by, as
 # CONFIG.md and the Limine protocol's specification say it is used. The
 # machines are QEMU ones given those strings, their framebuffers the EFI
@@ -79,7 +79,7 @@ def upright(r):
 
 
 def interface_rotation(r):
-    """The rotation Limine's terminal had, as the parameters given to the
+    """The rotation Initium's terminal had, as the parameters given to the
     kernel to set one up alike say."""
     return int(re.search(r'rotation=(\d+)', r['flanterm.0.font']).group(1))
 
@@ -118,10 +118,10 @@ def wait_fake_text(t, m, needle, width, height, pitch, rotate=0, timeout=30):
 
 @check(ports=UEFI_PORTS, tags=['fb-quirks', 'limine-protocol', 'gop', 'gterm'])
 def fb_quirks_first_framebuffer_only(t):
-    """Limine goes by what SMBIOS names the machine as for the first
+    """Initium goes by what SMBIOS names the machine as for the first
     framebuffer alone, the one the Linux protocol hands Linux [intent]. With
     QEMU's display present that is the firmware's GOP's, and the probe's,
-    the second, is left as reported, Limine's interface on it unturned."""
+    the second, is left as reported, Initium's interface on it unturned."""
     def report(smbios_, extra=''):
         config = 'timeout: 0\n' + entry('Test', path='boot():/boot/kernel.elf', cmdline='x', extra=extra)
         m = probe_then_limine(t, 'fakegop:2', config, {'/boot/kernel.elf': HostFile(kernel_file(t, 'full'))},
@@ -156,7 +156,7 @@ def fb_quirks_first_framebuffer_only(t):
 
 @check(ports=UEFI_PORTS, tags=['fb-quirks', 'limine-protocol', 'gop', 'gterm'])
 def fb_quirks_turned_panels(t):
-    """Without interface_rotation, Limine's interface is turned to look
+    """Without interface_rotation, Initium's interface is turned to look
     upright on a framebuffer of the size of a panel SMBIOS names as mounted
     turned in its casing (CONFIG.md), 90 degrees for the panel's right edge at
     the top of the casing and 270 for its left; any other framebuffer is left
@@ -218,9 +218,9 @@ def fb_quirks_upright_rotation(t):
 
 @check(ports=['uefi-ia32', 'uefi-x86-64'], tags=['fb-quirks', 'multiboot1', 'gop'])
 def fb_quirks_rotation_after_boot_services(t):
-    """The terminal Limine keeps for panicking once boot services are gone is
+    """The terminal Initium keeps for panicking once boot services are gone is
     turned upright on a panel mounted turned [intent]. Here it shows
-    Multiboot 1's panic at a memory map the probe fragmented past what Limine
+    Multiboot 1's panic at a memory map the probe fragmented past what Initium
     passes."""
     config = 'timeout: 0\n' + entry('Test', protocol='multiboot1', path='boot():/kernel', cmdline='x',
                                     extra='resolution: 800x1280x32')
@@ -306,7 +306,7 @@ def fb_quirks_fixed_mode(t):
 
 @check(ports=UEFI_PORTS, tags=['fb-quirks', 'gop', 'gterm'])
 def fb_quirks_portrait_interface(t):
-    """Limine's interface is drawn on a portrait panel whose modes GOP
+    """Initium's interface is drawn on a portrait panel whose modes GOP
     reports landscape as it is laid out."""
     config = 'timeout: no\n' + entry('Test', path='boot():/boot/kernel.elf', cmdline='x')
     m = boot_fake(t, MIIX_320, config, {'/boot/kernel.elf': HostFile(kernel_file(t, 'full'))})
@@ -315,10 +315,10 @@ def fb_quirks_portrait_interface(t):
 
 @check(ports=['uefi-ia32', 'uefi-x86-64'], tags=['fb-quirks', 'multiboot1', 'gop'])
 def fb_quirks_portrait_after_boot_services(t):
-    """The terminal Limine keeps for panicking once boot services are gone
+    """The terminal Initium keeps for panicking once boot services are gone
     draws on a portrait panel whose modes GOP reports landscape as it is
     laid out, whatever the kernel is given [intent]. Here it shows
-    Multiboot 1's panic at a memory map the probe fragmented past what Limine
+    Multiboot 1's panic at a memory map the probe fragmented past what Initium
     passes."""
     config = 'timeout: 0\n' + entry('Test', protocol='multiboot1', path='boot():/kernel', cmdline='x')
     m = probe_then_limine(t, 'fakegop:2 fragment:180', config, {'/kernel': HostFile(mb1_kernel(t, 'video'))},

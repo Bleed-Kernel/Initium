@@ -7,8 +7,8 @@ from harness.ports import ALL_PORTS, UEFI_PORTS, Drive
 from cases._common import check_report_clean, entry, kernel_file, wait_panic
 from cases.chainload import probe_then_limine
 
-# Disks that fail Limine's reads: sectors the medium will not deliver, a disk
-# smaller than the transfers Limine sizes up its drives with, and one whose
+# Disks that fail Initium's reads: sectors the medium will not deliver, a disk
+# smaller than the transfers Initium sizes up its drives with, and one whose
 # firmware refuses the transfers its granularity implies.
 
 MODULE = bytes(range(251)) * (2 * 1024 * 1024 // 251)
@@ -17,7 +17,7 @@ MODULE = bytes(range(251)) * (2 * 1024 * 1024 // 251)
 def failing_disk(t, files, config):
     """A boot disk holding files, through QEMU's blkdebug driver failing every
     read that covers the fifth sector of the last one's data; a megabyte of
-    padding keeps the failing sector clear of the firmware's and Limine's
+    padding keeps the failing sector clear of the firmware's and Initium's
     reads ahead of what comes before."""
     tree = Tree()
     tree.add('/boot/kernel.elf', HostFile(kernel_file(t, 'full')))
@@ -52,7 +52,7 @@ def disk_read_errors(t):
 
 @check(ports=['bios'], tags=['disk'])
 def disk_smaller_than_transfers(t):
-    """A disk smaller than the 32KiB Limine reads to size up its transfers
+    """A disk smaller than the 32KiB Initium reads to size up its transfers
     does not stop the boot [intent]."""
     tiny = t.path('tiny.img')
     with open(tiny, 'wb') as f:

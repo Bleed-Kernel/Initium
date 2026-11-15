@@ -1,43 +1,43 @@
-# Limine configuration file
+# Initium configuration file
 
 ## Location of the config file
 
-Limine scans for the config file on *the boot drive*. On EFI, the volume
-containing the EFI executable of the booted Limine is scanned first. The
+Initium scans for the config file on *the boot drive*. On EFI, the volume
+containing the EFI executable of the booted Initium is scanned first. The
 drive is then scanned as a whole, followed by every partition sequentially -
 first partition first, last partition last. On each volume the candidates are
-tried in this order: on EFI, `<EFI app path>/limine.conf` first, or
-`/EFI/BOOT/limine.conf` where that path cannot be determined; then
-`/boot/limine/limine.conf`, `/boot/limine.conf`, `/limine/limine.conf`, and
-`/limine.conf`.
+tried in this order: on EFI, `<EFI app path>/initium.conf` first, or
+`/EFI/BOOT/initium.conf` where that path cannot be determined; then
+`/boot/initium/initium.conf`, `/boot/initium.conf`, `/initium/initium.conf`, and
+`/initium.conf`.
 
 These names are matched case insensitively; see [Paths](#paths) for how paths
 elsewhere in the config file are matched.
 
-Once the file is located, Limine will use it as its config file. Other possible
+Once the file is located, Initium will use it as its config file. Other possible
 candidates in subsequent partitions or directories are ignored.
 
 It is thus imperative that the intended config file is placed in a location
 that will not be shadowed by another candidate config file.
 
-On EFI, should Limine fail to determine which volume it was booted from, it
+On EFI, should Initium fail to determine which volume it was booted from, it
 reports the condition as a bug and waits for a keypress. It then scans every
-volume it can see, for `/EFI/limine/limine.conf` and `/EFI/BOOT/limine.conf`
+volume it can see, for `/EFI/initium/initium.conf` and `/EFI/BOOT/initium.conf`
 before the four names above.
 
 ### Config via SMBIOS
 
-Alternatively, if present, Limine considers first and foremost configurations
+Alternatively, if present, Initium considers first and foremost configurations
 supplied to it as SMBIOS OEM String entries (Type 11). Such configurations are
 accepted if the first string of such an entry starts with the prefix of
-`limine:config:`. The rest of the string is taken as the config file. If such a
+`initium:config:`. The rest of the string is taken as the config file. If such a
 configuration is found, no further scanning for config files is done. As such,
 in this SMBIOS-provided config file scenario, the `boot():` drive is undefined
-on BIOS, and set to the boot device of Limine on UEFI.
+on BIOS, and set to the boot device of Initium on UEFI.
 
 ## Structure of the config file
 
-The Limine configuration file is comprised of *menu entries* and *options*.
+The Initium configuration file is comprised of *menu entries* and *options*.
 Comments begin in '#' and can only be on their own lines.
 
 ### Menu entries and sub-entries
@@ -107,9 +107,9 @@ Miscellaneous:
   to use for serial I/O. Defaults to `115200`, which is also the maximum. The
   minimum is `50`, and the rate must divide `115200` exactly, which every
   standard rate in that range does except `110`, `2000` and `56000`; any other
-  value is treated as `115200`. BIOS only, ignored with Limine UEFI.
+  value is treated as `115200`. BIOS only, ignored with Initium UEFI.
 * `global_dtb` - If set, use this DTB instead of the firmware-provided DTB for
-  Limine itself, as well as for any booted entry whose protocol supports DTBs
+  Initium itself, as well as for any booted entry whose protocol supports DTBs
   and the DTB is not locally overridden with `dtb_path`.
 * `default_entry` - Entry which will be automatically selected at startup.
   Can be a 1-based entry index (e.g. `1`), or an entry path (e.g.
@@ -150,7 +150,7 @@ Miscellaneous:
   BIOS or UEFI, this will only randomise memory below 4GiB.
 * `randomize_memory` - Alias of `randomise_memory`.
 * `hash_mismatch_panic` - If set to `no`, do not panic if there is a hash
-  mismatch for a file. A warning is printed and Limine then waits for a
+  mismatch for a file. A warning is printed and Initium then waits for a
   keypress: `Y` continues the boot, any other key returns to the menu. Forced
   to `yes` when Secure Boot is active and a config hash is enrolled. A
   wallpaper or font whose hash does not match is skipped either way.
@@ -177,19 +177,19 @@ Miscellaneous:
   countdown, as pressing a key does. On BIOS this uses the PS/2 (or emulated
   PS/2) mouse; on UEFI any pointer device the firmware exposes.
 
-Limine interface control options:
+Initium interface control options:
 
-* `interface_resolution` - Specify screen resolution to be used by the Limine
+* `interface_resolution` - Specify screen resolution to be used by the Initium
   interface (menu, editor, console...) in the form `<width>x<height>`. This
-  will *only* affect the Limine interface, not any booted OS. If not specified,
-  Limine will pick a resolution automatically. If the resolution is not
-  available, Limine will pick another one automatically. Ignored if using text
+  will *only* affect the Initium interface, not any booted OS. If not specified,
+  Initium will pick a resolution automatically. If the resolution is not
+  available, Initium will pick another one automatically. Ignored if using text
   mode.
-* `interface_rotation` - Specifies the rotation of the Limine interface.
+* `interface_rotation` - Specifies the rotation of the Initium interface.
   It can be any of the following values: `0`, `90`, `180`, `270`. Default is
-  `0`, but on a panel Limine knows to be mounted turned in its casing it is the
+  `0`, but on a panel Initium knows to be mounted turned in its casing it is the
   turn that shows the interface upright.
-* `interface_branding` - A string that will be displayed on top of the Limine
+* `interface_branding` - A string that will be displayed on top of the Initium
   interface.
 * `interface_branding_colour` - An `RRGGBB` hexadecimal value specifying the
   colour of the branding string. Default is `00aaaa`.
@@ -205,7 +205,7 @@ Limine interface control options:
   to each channel (saturating at `0xff`).
 * `interface_help_color_bright` - Alias of `interface_help_colour_bright`.
 
-Limine graphical terminal control options:
+Initium graphical terminal control options:
 
 These are ignored if using text mode.
 
@@ -232,7 +232,7 @@ These are ignored if using text mode.
   follows the resolution: `1x1` below 2560x1440, `2x2` from there, and `4x4`
   from 5120x2880.
 * `term_font_spacing` - Horizontal spacing, in pixels, between glyphs on
-  screen. Also applies to the built-in Limine font. Defaults to 1. 0 is
+  screen. Also applies to the built-in Initium font. Defaults to 1. 0 is
   allowed; a value above 8, or one that is not a number, is treated as if the
   option were unset.
 * `term_palette` - Specifies the colour palette used by the terminal (RRGGBB).
@@ -280,7 +280,7 @@ Editor control options:
 * `if_arch` - Hide the entry if the current CPU architecture is not in the
   space separated list of permitted architectures
     * see the `ARCH` macro in [Built-in macros](#built-in-macros) for a list of possible architectures
-* `if_loader_arch` - Hide the entry if the Limine binary's own architecture is
+* `if_loader_arch` - Hide the entry if the Initium binary's own architecture is
   not in the space separated list of permitted architectures
     * see the `LOADER_ARCH` macro in [Built-in macros](#built-in-macros) for details
 
@@ -298,7 +298,7 @@ Editor control options:
   * `module_path` - The path to a module (such as initramfs). This option can
     be specified multiple times to specify multiple modules.
   * `resolution` - The resolution to be used. This setting takes the form of
-    `<width>x<height>x<bpp>`. If the resolution is not available, Limine will
+    `<width>x<height>x<bpp>`. If the resolution is not available, Initium will
     pick another one automatically. Omitting `<bpp>` will default to 32.
   * `textmode` - If set to `yes`, prefer text mode. (BIOS only)
   * `dtb_path` - A device tree blob to pass instead of the one provided by the
@@ -314,7 +314,7 @@ Editor control options:
     last module option specified.
   * `module_cmdline` - Alias of `module_string`.
   * `resolution` - The resolution to be used. This setting takes the form of
-    `<width>x<height>x<bpp>`. If the resolution is not available, Limine will
+    `<width>x<height>x<bpp>`. If the resolution is not available, Initium will
     pick another one automatically. Omitting `<bpp>` will default to 32.
   * `kaslr` - For relocatable executables, if set to `yes`, enable kernel
     address space layout randomisation. KASLR is disabled by default.
@@ -323,10 +323,7 @@ Editor control options:
     KASLR is supported and enabled, else it is `no`.
   * `randomize_hhdm_base` - Alias of `randomise_hhdm_base`.
   * `max_paging_mode`, `min_paging_mode` - Limit the maximum and minimum paging
-    modes to one of the following:
-    - x86-64 and aarch64: `4level`, `5level`.
-    - riscv64: `sv39`, `sv48`, `sv57`.
-    - loongarch64: `4level`.
+    modes to `4level` or `5level`.
   * `paging_mode` - Equivalent to setting both `max_paging_mode` and
     `min_paging_mode` to the same value.
   * `dtb_path` - A device tree blob to pass instead of the one provided by the
@@ -343,7 +340,7 @@ Editor control options:
   * `resolution` - The resolution to be used should the executable request a
     graphical framebuffer. This setting takes the form of
     `<width>x<height>x<bpp>` and *overrides* any resolution requested by the
-    executable. If the resolution is not available, Limine will pick another
+    executable. If the resolution is not available, Initium will pick another
     one automatically. Omitting `<bpp>` will default to 32.
   * `textmode` - If set to `yes`, prefer text mode. (BIOS only)
 
@@ -351,12 +348,12 @@ Editor control options:
   * `path` - Path of the EFI application to chainload.
   * `image_path` - Alias of `path`.
   * `resolution` - The resolution to be used. This setting takes the form of
-    `<width>x<height>x<bpp>`. If the resolution is not available, Limine will
+    `<width>x<height>x<bpp>`. If the resolution is not available, Initium will
     pick another one automatically. Omitting `<bpp>` will default to 32.
 
   If the chainloaded application returns, as a UEFI Shell does when exited,
-  Limine does not go back to its menu: it exits in turn, passing the status and
-  exit data the application returned on to whatever started Limine, usually the
+  Initium does not go back to its menu: it exits in turn, passing the status and
+  exit data the application returned on to whatever started Initium, usually the
   firmware's boot manager.
 
 * EFI Boot Entry protocol:
@@ -377,14 +374,14 @@ Editor control options:
     and `mbr_id`, if present, but does *not* override `partition`.
 
   To boot FreeBSD on a BIOS/GPT disk, point `partition` at the `freebsd-boot`
-  partition. Limine recognises it by its GPT type GUID and emulates FreeBSD's
+  partition. Initium recognises it by its GPT type GUID and emulates FreeBSD's
   `pmbr`: it loads the whole partition (`gptboot`) and hands off to it, rather
   than treating it as a conventional boot record (which it is not, as it has no
   `0xAA55` signature).
 
 ## Paths
 
-A Limine path is used to locate files in the whole system. It is comprised of
+A Initium path is used to locate files in the whole system. It is comprised of
 a *resource*, a *resource argument*, and a *path*. It takes the form of:
 ```
 resource(argument):/path
@@ -424,7 +421,7 @@ A resource can be one of the following:
   are matched case insensitively.
 * `tftp` - The `argument` is the IP address of the tftp server to load the file
   from. If the argument is left empty (`tftp():/...`) the file will be loaded
-  from the server Limine booted from. This resource is only available when
+  from the server Initium booted from. This resource is only available when
   booting off PXE.
 
 Paths are matched case sensitively, with two exceptions. On FAT volumes a name
@@ -449,10 +446,10 @@ A path can optionally be suffixed with a blake2b hash for the referenced file,
 by appending a pound character (`#`) followed by the blake2b hash.
 E.g.: `boot():/somemodule.tar#ca6914d2...446b470a`.
 When Secure Boot is active and a config hash is enrolled, all file paths
-**must** have a hash appended or Limine will panic (except for wallpapers and
+**must** have a hash appended or Initium will panic (except for wallpapers and
 fonts, which are silently skipped instead, falling back to defaults, and for
 images chainloaded with the `efi` protocol, whose signature the firmware
-verifies instead). Without an enrolled hash Limine treats Secure Boot as
+verifies instead). Without an enrolled hash Initium treats Secure Boot as
 inactive; see [USAGE.md](USAGE.md#secure-boot).
 
 A gzip-compressed resource is indicated by inserting a dollar character (`$`)
@@ -482,16 +479,16 @@ warning, so a misspelt `${ROOTDEV}` turns `root=${ROOTDEV} quiet` into
 
 ### Built-in macros
 
-Limine automatically defines these macros:
+Initium automatically defines these macros:
 
 * `ARCH` - This built-in macro expands to the architecture of the machine.
-  Possible values are: `x86-64`, `ia-32`, `aarch64`, `riscv64`, `loongarch64`.
+  Possible values are: `x86-64`, `ia-32`.
   In the case of IA-32, BIOS or UEFI, the macro will always expand to `x86-64`
   if the 64-bit extensions are available, else `ia-32`.
 * `FW_TYPE` - This built-in macro expands to `UEFI` if booted using UEFI
   firmware, or `BIOS` if booted using legacy x86 BIOS.
-* `LOADER_ARCH` - This built-in macro expands to the architecture of the Limine
-  binary itself. Possible values are the same as `ARCH`: `x86-64`, `ia-32`,
-  `aarch64`, `riscv64`, `loongarch64`. Unlike `ARCH`, this is determined at
+* `LOADER_ARCH` - This built-in macro expands to the architecture of the Initium
+  binary itself. Possible values are the same as `ARCH`: `x86-64`, `ia-32`.
+  Unlike `ARCH`, this is determined at
   compile time and does not probe CPU capabilities; the IA-32 binary always
   expands to `ia-32` even on a CPU with 64-bit extensions.

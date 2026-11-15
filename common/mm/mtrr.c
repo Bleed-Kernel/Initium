@@ -1,4 +1,3 @@
-#if defined(__x86_64__) || defined(__i386__)
 
 #include <stdint.h>
 #include <stddef.h>
@@ -268,4 +267,3 @@ bool mtrr_wc_add_fb_range(uint64_t base, uint64_t size) {
     return ok;
 }
 
-#endif

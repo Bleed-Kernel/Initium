@@ -55,7 +55,7 @@
 #define TEST_ENTROPY_COUNT 16
 #endif
 
-// 0 for no flanterm init parameters request, which has Limine keep the screen.
+// 0 for no flanterm init parameters request, which has Initium keep the screen.
 #ifndef TEST_FLANTERM_REQUEST
 #define TEST_FLANTERM_REQUEST 1
 #endif

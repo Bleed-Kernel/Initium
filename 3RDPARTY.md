@@ -1,15 +1,15 @@
 # 3rd Party Software Acknowledgments
 
-Limine includes software from other projects. Some of it is fetched by the
-`./bootstrap` script, which copies some of its files into Limine's own source
+Initium includes software from other projects. Some of it is fetched by the
+`./bootstrap` script, which copies some of its files into Initium's own source
 tree, and release tarballs ship it as if `./bootstrap` had already been run.
-The rest is code from other projects kept in, or adapted into, Limine's own
+The rest is code from other projects kept in, or adapted into, Initium's own
 source files. This file covers all of it.
 
-Binary copies of Limine, such as Limine's binary release archives and packages
+Binary copies of Initium, such as Initium's binary release archives and packages
 built from source, do not come with the source files in which these projects'
 notices appear. This file therefore reproduces, for every project with code in
-Limine's binaries, its copyright notices and the full text of its license, and
+Initium's binaries, its copyright notices and the full text of its license, and
 must accompany those binaries.
 
 This software is NOT covered by the License as contained inside the `COPYING`
@@ -20,9 +20,9 @@ and by the notices in its source files.
 
 ## Summary
 
-A non-binding, informal summary of these projects, and of the licenses Limine
+A non-binding, informal summary of these projects, and of the licenses Initium
 uses them under, in SPDX format, follows. Where a project, or part of one, is
-offered under a choice of licenses, only the one chosen by the Limine
+offered under a choice of licenses, only the one chosen by the Initium
 developers is listed. The notices further below give the full terms.
 
 ### Fetched by `./bootstrap`
@@ -39,8 +39,8 @@ used to provide runtime libgcc-like routines. `./bootstrap` copies its
 Protocol.
 
 - [PicoEFI](https://github.com/PicoEFI/PicoEFI) (0BSD) provides the UEFI
-headers, the linker scripts Limine's own are based on, and the relocation and
-entry code built into Limine's UEFI binaries.
+headers, the linker scripts Initium's own are based on, and the relocation and
+entry code built into Initium's UEFI binaries.
 
 - [Flanterm](https://github.com/Mintsuki/Flanterm) (BSD-2-Clause) is used for
 text related screen drawing.
@@ -59,7 +59,7 @@ its `pdgzip.c` and `pdgzip.h` to `common/compress/`.
 Release tarballs carry the other projects whole, but only the files copied out
 of freestanding-lgrt, stb_image, and pdgzip, which keep their notices.
 
-### In Limine's own source tree
+### In Initium's own source tree
 
 - The `multiboot2.h` header of the
 [Multiboot2 Specification](https://www.gnu.org/software/grub/manual/multiboot2/)
@@ -88,18 +88,18 @@ noted below) is the source of code in `common/drivers/gop.c`,
 
 ## Notices
 
-Limine's BIOS binaries are `limine-bios.sys` and the boot sector images
-`limine-bios-cd.bin`, `limine-bios-hdd.bin`, and `limine-bios-pxe.bin`. The
+Initium's BIOS binaries are `initium-bios.sys` and the boot sector images
+`initium-bios-cd.bin`, `initium-bios-hdd.bin`, and `initium-bios-pxe.bin`. The
 boot sector images carry the stage 1 decompressor, and a compressed copy of
-the BIOS stage 2, which is built from the `*.s2.*` sources. The `limine` tool
-embeds `limine-bios-hdd.bin`, which Limine's binary release archives also ship
-as `limine-bios-hdd.h`. Limine's UEFI binaries are the `BOOT*.EFI` files, which
-`limine-uefi-cd.bin` also carries.
+the BIOS stage 2, which is built from the `*.s2.*` sources. The `initium` tool
+embeds `initium-bios-hdd.bin`, which Initium's binary release archives also ship
+as `initium-bios-hdd.h`. Initium's UEFI binaries are the `BOOT*.EFI` files, which
+`initium-uefi-cd.bin` also carries.
 
 ### freestanding-lgrt
 
-Built into Limine's BIOS and UEFI binaries, the BIOS stage 2 included, and so
-into the `limine` tool.
+Built into Initium's BIOS and UEFI binaries, the BIOS stage 2 included, and so
+into the `initium` tool.
 
 ```
 Copyright (C) 2026 Mintsuki and contributors.
@@ -118,7 +118,7 @@ PERFORMANCE OF THIS SOFTWARE.
 
 ### Freestanding C Headers
 
-Used to build Limine's BIOS and UEFI binaries.
+Used to build Initium's BIOS and UEFI binaries.
 
 ```
 Copyright (C) 2022-2026 Mintsuki and contributors.
@@ -137,7 +137,7 @@ PERFORMANCE OF THIS SOFTWARE.
 
 ### Limine Boot Protocol
 
-Its header is used to build Limine's BIOS and UEFI binaries.
+Its header is used to build Initium's BIOS and UEFI binaries.
 
 ```
 Copyright (C) 2022-2026 Mintsuki and contributors.
@@ -156,8 +156,8 @@ CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
 
 ### PicoEFI
 
-Its relocation and entry code is built into Limine's UEFI binaries, which are
-built using its headers, and Limine's own UEFI linker scripts are based on its
+Its relocation and entry code is built into Initium's UEFI binaries, which are
+built using its headers, and Initium's own UEFI linker scripts are based on its
 linker scripts.
 
 ```
@@ -177,7 +177,7 @@ PERFORMANCE OF THIS SOFTWARE.
 
 ### Flanterm
 
-Built into Limine's BIOS and UEFI binaries.
+Built into Initium's BIOS and UEFI binaries.
 
 ```
 Copyright (C) 2022-2026 Mintsuki and contributors.
@@ -206,7 +206,7 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 ### stb_image
 
-Built into Limine's BIOS and UEFI binaries. Limine uses it under the first of
+Built into Initium's BIOS and UEFI binaries. Initium uses it under the first of
 the alternatives below, the MIT License.
 
 ```
@@ -253,7 +253,7 @@ WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 ### libfdt
 
-Built into Limine's BIOS and UEFI binaries. Limine uses it under the following
+Built into Initium's BIOS and UEFI binaries. Initium uses it under the following
 terms, rather than the GNU General Public License version 2 or later it is
 also offered under.
 
@@ -291,7 +291,7 @@ POSSIBILITY OF SUCH DAMAGE.
 
 ### pdgzip
 
-Built into Limine's BIOS and UEFI binaries.
+Built into Initium's BIOS and UEFI binaries.
 
 ```
 Copyright (C) 2026 Kamila Szewczyk <k@iczelia.net>.
@@ -311,7 +311,7 @@ PERFORMANCE OF THIS SOFTWARE.
 ### Multiboot2 Specification
 
 `common/protos/multiboot2.h` is adapted from the Multiboot2 Specification, and
-used to build Limine's BIOS and UEFI binaries.
+used to build Initium's BIOS and UEFI binaries.
 
 ```
 Copyright (C) 1999,2003,2007,2008,2009,2010  Free Software Foundation, Inc.
@@ -336,9 +336,9 @@ IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 ### QOI
 
-Limine's QOI decoder (`common/lib/qoi.c`) is adapted from the
+Initium's QOI decoder (`common/lib/qoi.c`) is adapted from the
 [QOI reference decoder](https://github.com/phoboslab/qoi), and built into
-Limine's BIOS and UEFI binaries.
+Initium's BIOS and UEFI binaries.
 
 ```
 Copyright (c) 2021, Dominic Szablewski - https://phoboslab.org
@@ -364,10 +364,10 @@ SOFTWARE.
 
 ### PCG
 
-Limine's PCG32 generator (`common/lib/rand.s2.c`) is adapted from the
+Initium's PCG32 generator (`common/lib/rand.s2.c`) is adapted from the
 [PCG reference implementation](https://github.com/imneme/pcg-c-basic), and
-built into Limine's BIOS and UEFI binaries, the BIOS stage 2 included, and so
-into the `limine` tool.
+built into Initium's BIOS and UEFI binaries, the BIOS stage 2 included, and so
+into the `initium` tool.
 
 ```
 Copyright 2014 Melissa O'Neill <oneill@pcg-random.org>
@@ -591,9 +591,9 @@ limitations under the License.
 
 ### BLAKE2
 
-Limine's BLAKE2b implementation (`common/crypt/blake2b.c`) is based on the
+Initium's BLAKE2b implementation (`common/crypt/blake2b.c`) is based on the
 [BLAKE2 reference implementation](https://github.com/BLAKE2/BLAKE2), and built
-into Limine's BIOS and UEFI binaries. Limine uses it under CC0 1.0 Universal,
+into Initium's BIOS and UEFI binaries. Initium uses it under CC0 1.0 Universal,
 whose text is at the end of this file.
 
 ```
@@ -615,8 +615,8 @@ https://blake2.net.
 
 `acpi_checksum()` in `common/lib/acpi.s2.c` is based on
 `lai_bios_calc_checksum()` from [LAI](https://github.com/managarm/lai), and
-built into Limine's BIOS and UEFI binaries, the BIOS stage 2 included, and so
-into the `limine` tool.
+built into Initium's BIOS and UEFI binaries, the BIOS stage 2 included, and so
+into the `initium` tool.
 
 ```
 MIT License
@@ -644,11 +644,11 @@ SOFTWARE.
 
 ### Micro LZMA decoder
 
-Limine's BIOS stage 1 decompressor (`stage1/decompressor.asm`) decodes limlz,
+Initium's BIOS stage 1 decompressor (`stage1/decompressor.asm`) decodes limlz,
 an LZMA-based format, and is a modified version of the Micro LZMA decoder for
 x86 (static) by Ilya Kurdyukov, from
 https://github.com/ilyakurdyukov/micro-lzmadec. It is built into the BIOS boot
-sector images, and so into the `limine` tool. The original decoder is covered
+sector images, and so into the `initium` tool. The original decoder is covered
 by the notice below, whose license follows it.
 
 ```
@@ -995,10 +995,10 @@ Creative Commons Notice
 ### OSDev Wiki
 
 Code taken from the [OSDev Wiki](https://wiki.osdev.org) is part of
-`common/drivers/gop.c`, built into Limine's UEFI binaries, and of
+`common/drivers/gop.c`, built into Initium's UEFI binaries, and of
 `common/drivers/mouse.c`, `common/drivers/vga_textmode.c`, and
-`common/sys/a20.s2.c`, built into Limine's BIOS binaries. `a20.s2.c` is part of
-the BIOS stage 2, and so of the `limine` tool. All content added to the OSDev
+`common/sys/a20.s2.c`, built into Initium's BIOS binaries. `a20.s2.c` is part of
+the BIOS stage 2, and so of the `initium` tool. All content added to the OSDev
 Wiki since 6 June 2011 is licensed under CC0 1.0 Universal, whose text is at
 the end of this file.
 
@@ -1010,7 +1010,7 @@ The cursor position writes in `common/drivers/vga_textmode.c` come from Dark
 Fiber's `update_cursor()`, which was never confirmed to have been opted into
 CC0. If you wrote it and want it removed, or are fine with it being licensed
 under CC0 1.0 Universal, please open an issue at
-https://github.com/Limine-Bootloader/Limine/issues.
+https://github.com/Bleed-Kernel/Initium/issues.
 
 ## CC0 1.0 Universal
 

@@ -921,7 +921,7 @@ static bool index_disks(void) {
     status = gBS->locate_handle(EFI_BY_PROTOCOL, &block_io_guid, NULL, &handles_size, handles);
 
     if (status != EFI_SUCCESS) {
-        panic(false, "LocateHandle for BLOCK_IO_PROTOCOL failed. Machine not supported by Limine UEFI.");
+        panic(false, "LocateHandle for BLOCK_IO_PROTOCOL failed. Machine not supported by Initium UEFI.");
     }
 
     size_t indexed_before = volume_index_i;
@@ -1073,7 +1073,7 @@ void disk_create_index(void) {
             return;
         }
 
-        panic(false, "LocateHandle for BLOCK_IO_PROTOCOL failed. Machine not supported by Limine UEFI.");
+        panic(false, "LocateHandle for BLOCK_IO_PROTOCOL failed. Machine not supported by Initium UEFI.");
     }
 
     index_disks();

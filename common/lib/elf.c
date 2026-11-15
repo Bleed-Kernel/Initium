@@ -41,9 +41,6 @@
 #define ABI_SYSV     0x00
 #define ARCH_X86_64  0x3e
 #define ARCH_X86_32  0x03
-#define ARCH_AARCH64 0xb7
-#define ARCH_RISCV   0xf3
-#define ARCH_LOONGARCH 0x102
 #define BITS_LE      0x01
 #define ELFCLASS32   0x01
 #define ELFCLASS64   0x02
@@ -53,23 +50,10 @@
 #define SHN_XINDEX 0x0000ffff
 #define STB_WEAK     0x00000002
 #define R_X86_64_NONE      0x00000000
-#define R_AARCH64_NONE     0x00000000
-#define R_RISCV_NONE       0x00000000
-#define R_LARCH_NONE       0x00000000
 #define R_X86_64_RELATIVE  0x00000008
-#define R_AARCH64_RELATIVE 0x00000403
-#define R_RISCV_RELATIVE   0x00000003
-#define R_LARCH_RELATIVE   0x00000003
 #define R_X86_64_GLOB_DAT  0x00000006
-#define R_AARCH64_GLOB_DAT 0x00000401
 #define R_X86_64_JUMP_SLOT 0x00000007
-#define R_AARCH64_JUMP_SLOT 0x00000402
-#define R_RISCV_JUMP_SLOT  0x00000005
-#define R_LARCH_JUMP_SLOT  0x00000005
 #define R_X86_64_64        0x00000001
-#define R_RISCV_64         0x00000002
-#define R_LARCH_64         0x00000002
-#define R_AARCH64_ABS64    0x00000101
 
 #define R_INTERNAL_RELR    0xfffffff0
 
@@ -166,25 +150,9 @@ static bool elf64_validate(struct elf64_hdr *hdr) {
         panic(true, "elf: Not a Little-endian ELF file.");
     }
 
-#if defined(__x86_64__) || defined(__i386__)
     if (hdr->machine != ARCH_X86_64 || hdr->ident[EI_CLASS] != ELFCLASS64) {
         panic(true, "elf: Not an x86-64 ELF file.");
     }
-#elif defined(__aarch64__)
-    if (hdr->machine != ARCH_AARCH64 || hdr->ident[EI_CLASS] != ELFCLASS64) {
-        panic(true, "elf: Not an aarch64 ELF file.");
-    }
-#elif defined(__riscv)
-    if (hdr->machine != ARCH_RISCV || hdr->ident[EI_CLASS] != ELFCLASS64) {
-        panic(true, "elf: Not a riscv64 ELF file.");
-    }
-#elif defined(__loongarch64)
-    if (hdr->machine != ARCH_LOONGARCH || hdr->ident[EI_CLASS] != ELFCLASS64) {
-        panic(true, "elf: Not a loongarch64 ELF file.");
-    }
-#else
-#error Unknown architecture
-#endif
 
     // The gABI naturally aligns every structure it defines within the file.
     if (hdr->phoff % 8 != 0 || hdr->phdr_size % 8 != 0
@@ -217,11 +185,7 @@ int elf_bits(uint8_t *elf, size_t file_size) {
 
     switch (hdr->machine) {
         case ARCH_X86_64:
-        case ARCH_AARCH64:
             return bits == 64 ? 64 : -1;
-        case ARCH_RISCV:
-        case ARCH_LOONGARCH:
-            return bits;
         case ARCH_X86_32:
             return bits == 32 ? 32 : -1;
         default:
@@ -675,9 +639,7 @@ static void elf64_free_relocations(struct elf64_reloc_state *st) {
 }
 
 // r_offset is the executable's to choose and real toolchains emit misaligned
-// DT_RELR targets, so these go a byte at a time: riscv64 without Zicclsm and
-// loongarch64 without UAL may trap a wide unaligned access, and neither a
-// packed type nor memcpy stops one being emitted on both.
+// DT_RELR targets, so these go a byte at a time.
 static uint64_t reloc_load(const void *p) {
     const volatile uint8_t *s = p;
     uint64_t v = 0;
@@ -721,27 +683,11 @@ static bool elf64_apply_relocations(const struct elf64_reloc_state *st, uint8_t 
         void *ptr = buffer + (relocation->r_addr - vaddr);
 
         switch (relocation->r_info) {
-#if defined(__x86_64__) || defined(__i386__)
             case R_X86_64_NONE:
-#elif defined(__aarch64__)
-            case R_AARCH64_NONE:
-#elif defined(__riscv)
-            case R_RISCV_NONE:
-#elif defined(__loongarch64)
-            case R_LARCH_NONE:
-#endif
             {
                 break;
             }
-#if defined(__x86_64__) || defined(__i386__)
             case R_X86_64_RELATIVE:
-#elif defined(__aarch64__)
-            case R_AARCH64_RELATIVE:
-#elif defined(__riscv)
-            case R_RISCV_RELATIVE:
-#elif defined(__loongarch64)
-            case R_LARCH_RELATIVE:
-#endif
             {
                 reloc_store(ptr, slide + relocation->r_addend);
                 break;
@@ -751,17 +697,8 @@ static bool elf64_apply_relocations(const struct elf64_reloc_state *st, uint8_t 
                 reloc_store(ptr, reloc_load(ptr) + slide);
                 break;
             }
-#if defined(__x86_64__) || defined(__i386__)
             case R_X86_64_GLOB_DAT:
             case R_X86_64_JUMP_SLOT:
-#elif defined(__aarch64__)
-            case R_AARCH64_GLOB_DAT:
-            case R_AARCH64_JUMP_SLOT:
-#elif defined(__riscv)
-            case R_RISCV_JUMP_SLOT:
-#elif defined(__loongarch64)
-            case R_LARCH_JUMP_SLOT:
-#endif
             {
                 if (symtab_offset == 0 || symtab_ent == 0) {
                     panic(true, "elf: Relocation requires symbol table but none present");
@@ -779,11 +716,7 @@ static bool elf64_apply_relocations(const struct elf64_reloc_state *st, uint8_t 
                 struct elf64_sym *s = (void *)elf + symtab_offset + sym_offset;
                 if (s->st_shndx == SHN_UNDEF) {
                     if ((s->st_info >> 4) == STB_WEAK) {
-#if defined(__aarch64__)
-                        reloc_store(ptr, relocation->r_addend);
-#else
                         reloc_store(ptr, 0);
-#endif
                         break;
                     }
                     if (strtab_size == 0) {
@@ -799,21 +732,10 @@ static bool elf64_apply_relocations(const struct elf64_reloc_state *st, uint8_t 
                 if (s->st_shndx != SHN_ABS) {
                     value += slide;
                 }
-#if defined(__aarch64__)
-                value += relocation->r_addend;
-#endif
                 reloc_store(ptr, value);
                 break;
             }
-#if defined(__x86_64__) || defined(__i386__)
             case R_X86_64_64:
-#elif defined(__aarch64__)
-            case R_AARCH64_ABS64:
-#elif defined(__riscv)
-            case R_RISCV_64:
-#elif defined(__loongarch64)
-            case R_LARCH_64:
-#endif
             {
                 if (symtab_offset == 0 || symtab_ent == 0) {
                     panic(true, "elf: Relocation requires symbol table but none present");

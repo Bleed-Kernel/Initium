@@ -5,15 +5,14 @@ from harness.elf import ElfFile
 from harness.ports import ALL_PORTS
 from cases._common import boot_entry, check_report_clean, entry, kernel_file, panics_in_turn, read
 
-# PROTOCOL.md's Limine Requests Section: an executable asking for base
+# PROTOCOL.md's Initium Requests Section: an executable asking for base
 # revision 0 may list its requests in .limine_reqs, a NULL-terminated array
 # of pointers to them, and only those are answered; from base revision 1 on
 # the section means nothing. The reqs executables list every request but the
 # date at boot one, and reqs0 holds a second bootloader info request as well,
 # which the list leaves out, but a scan of the image would find and refuse.
-# aarch64 boots nothing below base revision 6.
 
-PORTS = [p for p in ALL_PORTS if p != 'uefi-aarch64']
+PORTS = ALL_PORTS
 CONFLICT = 'limine: Conflict detected for request ID 0xf55038d8e2a1202f 0x279426fcf5f59740'
 OUTSIDE = 'limine: .limine_reqs entry outside kernel image'
 

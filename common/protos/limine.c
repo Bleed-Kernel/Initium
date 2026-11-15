@@ -13,7 +13,6 @@
 #include <lib/real.h>
 #include <lib/libc.h>
 #include <lib/gterm.h>
-#include <lib/fdt.h>
 #include <libfdt.h>
 #include <lib/uri.h>
 #include <lib/tpm.h>
@@ -302,113 +301,14 @@ flush:
     }
 
     // XXX we do this as a quick and dirty way to switch to the higher half
-#if defined(__x86_64__) || defined(__i386__)
     if (base_revision >= 1) {
         map_pages(pagemap, 0, 0, VMM_FLAG_WRITE, 0x100000000);
     }
-#endif
 
     return pagemap;
 }
 
-#if defined(__x86_64__) || defined(__i386__)
 extern symbol limine_spinup_32;
-#elif defined(__aarch64__)
-
-#define LIMINE_SCTLR ((1 << 29) /* Res1 */                \
-                    | (1 << 28) /* Res1 */                \
-                    | (1 << 23) /* Res1 */                \
-                    | (1 << 22) /* Res1 */                \
-                    | (1 << 20) /* Res1 */                \
-                    | (1 << 12) /* I-Cache */             \
-                    | (1 << 11) /* Res1 */                \
-                    | (1 << 8)  /* Res1 */                \
-                    | (1 << 7)  /* Res1 */                \
-                    | (1 << 4)  /* SP0 Alignment check */ \
-                    | (1 << 3)  /* SP Alignment check */  \
-                    | (1 << 2)  /* D-Cache */             \
-                    | (1 << 0)) /* MMU */                 \
-
-#define LIMINE_MAIR(fb) ( ((uint64_t)0b11111111 << 0) /* Normal WB RW-allocate non-transient */ \
-                        | ((uint64_t)(fb) << 8) )     /* Framebuffer type */
-
-#define LIMINE_TCR(tsz, pa, ds)                                                               \
-                            ( ((uint64_t)(ds) << 59)         /* 52-bit addressing (DS) */     \
-                            | ((uint64_t)(pa) << 32)         /* Intermediate address size */  \
-                            | ((uint64_t)2 << 30)            /* TTBR1 4K granule */           \
-                            | ((uint64_t)3 << 28)            /* TTBR1 Inner shareable */      \
-                            | ((uint64_t)1 << 26)            /* TTBR1 Outer WB RW-Allocate */ \
-                            | ((uint64_t)1 << 24)            /* TTBR1 Inner WB RW-Allocate */ \
-                            | ((uint64_t)(tsz) << 16)        /* Address bits in TTBR1 */      \
-                                                             /* TTBR0 4K granule */           \
-                            | ((uint64_t)3 << 12)            /* TTBR0 Inner shareable */      \
-                            | ((uint64_t)1 << 10)            /* TTBR0 Outer WB RW-Allocate */ \
-                            | ((uint64_t)1 << 8)             /* TTBR0 Inner WB RW-Allocate */ \
-                            | ((uint64_t)(tsz) << 0))        /* Address bits in TTBR0 */
-
-// Armv8.1 makes FEAT_VHE mandatory wherever EL2 is implemented, so EL2 without
-// it means Armv8.0, whose EL2 controls over EL1 are the fixed set
-// INIT_EL2_FOR_EL1 covers. Confirm rather than infer: for every extension
-// below, the values written on the way down are wrong, not just incomplete.
-static bool can_drop_to_el1(void) {
-    uint64_t reg;
-
-#define ID_FIELD(v, shift) (((v) >> (shift)) & 0xf)
-
-    // FEAT_RASv1p1 (HCR_EL2.FIEN), FEAT_SVE (CPTR_EL2.TZ), FEAT_MPAM
-    // (MPAM2_EL2), FEAT_AMUv1 (counter enables).
-    asm volatile ("mrs %0, id_aa64pfr0_el1" : "=r"(reg));
-    if (ID_FIELD(reg, 28) >= 2 || ID_FIELD(reg, 32) != 0
-     || ID_FIELD(reg, 40) != 0 || ID_FIELD(reg, 44) != 0) {
-        return false;
-    }
-
-    // FEAT_MTE2 (HCR_EL2.ATA), FEAT_MPAM (MPAM2_EL2), FEAT_SME (CPTR_EL2.TSM),
-    // FEAT_GCS (HCRX_EL2.GCSEn).
-    asm volatile ("mrs %0, id_aa64pfr1_el1" : "=r"(reg));
-    if (ID_FIELD(reg, 8) >= 2 || ID_FIELD(reg, 16) != 0
-     || ID_FIELD(reg, 24) != 0 || ID_FIELD(reg, 44) != 0) {
-        return false;
-    }
-
-    // FEAT_PAuth (HCR_EL2.{APK, API}), FEAT_LS64 (HCRX_EL2 enables).
-    asm volatile ("mrs %0, id_aa64isar1_el1" : "=r"(reg));
-    if (ID_FIELD(reg, 4) != 0 || ID_FIELD(reg, 8) != 0
-     || ID_FIELD(reg, 24) != 0 || ID_FIELD(reg, 28) != 0
-     || ID_FIELD(reg, 60) != 0) {
-        return false;
-    }
-
-    // FEAT_FGT (the HFG and HDFG fine grained trap registers).
-    asm volatile ("mrs %0, id_aa64mmfr0_el1" : "=r"(reg));
-    if (ID_FIELD(reg, 56) != 0) {
-        return false;
-    }
-
-    // FEAT_HCX (HCRX_EL2, several of whose enables trap when clear).
-    asm volatile ("mrs %0, id_aa64mmfr1_el1" : "=r"(reg));
-    if (ID_FIELD(reg, 40) != 0) {
-        return false;
-    }
-
-    // FEAT_SPE (MDCR_EL2.E2PB), FEAT_TRF (MDCR_EL2.TTRF), FEAT_TRBE
-    // (MDCR_EL2.E2TB), FEAT_BRBE (BRBCR_EL2).
-    asm volatile ("mrs %0, id_aa64dfr0_el1" : "=r"(reg));
-    if (ID_FIELD(reg, 32) != 0 || ID_FIELD(reg, 40) != 0
-     || ID_FIELD(reg, 44) != 0 || ID_FIELD(reg, 52) != 0) {
-        return false;
-    }
-
-#undef ID_FIELD
-
-    return true;
-}
-
-#elif defined(__riscv)
-#elif defined(__loongarch64)
-#else
-#error Unknown architecture
-#endif
 
 static uint64_t physical_base, virtual_base, slide, direct_map_offset;
 static size_t requests_count;
@@ -586,28 +486,8 @@ noreturn void limine_load(char *config, char *cmdline) {
     }
 #endif
 
-#if defined(__x86_64__) || defined(__i386__)
     uint32_t eax, ebx, ecx, edx;
-#endif
 
-#if defined(__aarch64__)
-    // The executable is entered at EL2 only with VHE, where the *_EL1 state the
-    // protocol describes redirects to the EL2 bank.
-    bool want_el2 = false;
-    bool drop_to_el1 = false;
-
-    if (current_el() == 2) {
-        uint64_t mmfr1;
-        asm volatile ("mrs %0, id_aa64mmfr1_el1" : "=r"(mmfr1));
-        if ((mmfr1 >> 8) & 0xF) {
-            want_el2 = true;
-        } else if (can_drop_to_el1()) {
-            drop_to_el1 = true;
-        } else {
-            panic(true, "limine: Booting at EL2 without VHE is only supported on Armv8.0 processors");
-        }
-    }
-#endif
 
     char *kernel_path = config_get_value(config, 0, "PATH");
     if (kernel_path == NULL) {
@@ -754,11 +634,6 @@ noreturn void limine_load(char *config, char *cmdline) {
         *base_rev_p2_ptr = 0;
     }
 
-#if defined(__aarch64__)
-    if (base_revision < 6) {
-        panic(true, "limine: Base revision %u is no longer supported for aarch64 (minimum: 6)", base_revision);
-    }
-#endif
 
     // Load requests
     requests_top = physical_base + image_size_before_bss;
@@ -781,8 +656,7 @@ noreturn void limine_load(char *config, char *cmdline) {
                 panic(true, "limine: .limine_reqs entry outside kernel image");
             }
 
-            // _get_request() reads the ID through this pointer as 64-bit
-            // loads, which riscv64 and loongarch64 are permitted to trap on.
+            // _get_request() reads the ID through this pointer as 64-bit loads.
             if (reqs_off % sizeof(uint64_t) != 0) {
                 panic(true, "limine: .limine_reqs entry is not 8-byte aligned");
             }
@@ -833,16 +707,13 @@ noreturn void limine_load(char *config, char *cmdline) {
         }
     }
 
-#if defined(__x86_64__) || defined(__i386__)
     // Check if 64 bit CPU
     if (!cpuid(0x80000001, 0, &eax, &ebx, &ecx, &edx) || !(edx & (1 << 29))) {
         panic(true, "limine: This CPU does not support 64-bit mode.");
     }
-#endif
 
     uint64_t hhdm_span_top = get_hhdm_span_top(base_revision);
 
-#if defined(__x86_64__) || defined(__i386__)
     uint64_t maxphyaddr;
     if (!cpuid(0x80000008, 0, &eax, &ebx, &ecx, &edx)) {
         maxphyaddr = 36;
@@ -856,7 +727,6 @@ noreturn void limine_load(char *config, char *cmdline) {
     if (maxphyaddr < 64 && hhdm_span_top > (uint64_t)1 << maxphyaddr) {
         panic(true, "limine: Top of HHDM exceeds maximum allowable MAXPHYADDR value");
     }
-#endif
 
     printv("limine: Physical base:   %X\n", physical_base);
     printv("limine: Virtual base:    %X\n", virtual_base);
@@ -869,7 +739,6 @@ noreturn void limine_load(char *config, char *cmdline) {
     // Paging Mode
     int max_supported_paging_mode, min_supported_paging_mode;
 
-#if defined(__x86_64__) || defined(__i386__)
     max_supported_paging_mode = PAGING_MODE_X86_64_4LVL;
     if (cpuid(0x00000007, 0, &eax, &ebx, &ecx, &edx) && (ecx & (1 << 16))) {
         printv("limine: CPU has 5-level paging support\n");
@@ -885,45 +754,6 @@ noreturn void limine_load(char *config, char *cmdline) {
     if (hhdm_span_top >= (uint64_t)1 << (paging_mode_va_bits(min_supported_paging_mode) - 2)) {
         goto hhdm_fail;
     }
-#elif defined(__aarch64__)
-    max_supported_paging_mode = vmm_max_paging_mode();
-    min_supported_paging_mode = PAGING_MODE_AARCH64_4LVL;
-    if (hhdm_span_top >= (uint64_t)1 << (paging_mode_va_bits(min_supported_paging_mode) - 2)) {
-        min_supported_paging_mode = PAGING_MODE_AARCH64_5LVL;
-        if (min_supported_paging_mode > max_supported_paging_mode) {
-            goto hhdm_fail;
-        }
-    }
-    if (hhdm_span_top >= (uint64_t)1 << (paging_mode_va_bits(min_supported_paging_mode) - 2)) {
-        goto hhdm_fail;
-    }
-#elif defined(__riscv)
-    max_supported_paging_mode = vmm_max_paging_mode();
-    min_supported_paging_mode = PAGING_MODE_RISCV_SV39;
-    if (hhdm_span_top >= (uint64_t)1 << (paging_mode_va_bits(min_supported_paging_mode) - 2)) {
-        min_supported_paging_mode = PAGING_MODE_RISCV_SV48;
-        if (min_supported_paging_mode > max_supported_paging_mode) {
-            goto hhdm_fail;
-        }
-    }
-    if (hhdm_span_top >= (uint64_t)1 << (paging_mode_va_bits(min_supported_paging_mode) - 2)) {
-        min_supported_paging_mode = PAGING_MODE_RISCV_SV57;
-        if (min_supported_paging_mode > max_supported_paging_mode) {
-            goto hhdm_fail;
-        }
-    }
-    if (hhdm_span_top >= (uint64_t)1 << (paging_mode_va_bits(min_supported_paging_mode) - 2)) {
-        goto hhdm_fail;
-    }
-#elif defined(__loongarch64)
-    max_supported_paging_mode = PAGING_MODE_LOONGARCH64_4LVL;
-    min_supported_paging_mode = PAGING_MODE_LOONGARCH64_4LVL;
-    if (hhdm_span_top >= (uint64_t)1 << (paging_mode_va_bits(min_supported_paging_mode) - 2)) {
-        goto hhdm_fail;
-    }
-#else
-#error Unknown architecture
-#endif
 
     if (0) {
 hhdm_fail:
@@ -941,31 +771,11 @@ hhdm_fail:
         user_max_paging_mode_s = config_get_value(config, 0, "MAX_PAGING_MODE");
     }
     if (user_max_paging_mode_s != NULL) {
-#if defined(__x86_64__) || defined(__i386__)
         if (strcasecmp(user_max_paging_mode_s, "4level") == 0) {
             user_max_paging_mode = PAGING_MODE_X86_64_4LVL;
         } else if (strcasecmp(user_max_paging_mode_s, "5level") == 0) {
             user_max_paging_mode = PAGING_MODE_X86_64_5LVL;
         }
-#elif defined(__aarch64__)
-        if (strcasecmp(user_max_paging_mode_s, "4level") == 0) {
-            user_max_paging_mode = PAGING_MODE_AARCH64_4LVL;
-        } else if (strcasecmp(user_max_paging_mode_s, "5level") == 0) {
-            user_max_paging_mode = PAGING_MODE_AARCH64_5LVL;
-        }
-#elif defined(__riscv)
-        if (strcasecmp(user_max_paging_mode_s, "sv39") == 0) {
-            user_max_paging_mode = PAGING_MODE_RISCV_SV39;
-        } else if (strcasecmp(user_max_paging_mode_s, "sv48") == 0) {
-            user_max_paging_mode = PAGING_MODE_RISCV_SV48;
-        } else if (strcasecmp(user_max_paging_mode_s, "sv57") == 0) {
-            user_max_paging_mode = PAGING_MODE_RISCV_SV57;
-        }
-#elif defined(__loongarch64)
-        if (strcasecmp(user_max_paging_mode_s, "4level") == 0) {
-            user_max_paging_mode = PAGING_MODE_LOONGARCH64_4LVL;
-        }
-#endif
         else {
             panic(true, "limine: Invalid MAX_PAGING_MODE: `%s`", user_max_paging_mode_s);
         }
@@ -980,31 +790,11 @@ hhdm_fail:
         user_min_paging_mode_s = config_get_value(config, 0, "MIN_PAGING_MODE");
     }
     if (user_min_paging_mode_s != NULL) {
-#if defined(__x86_64__) || defined(__i386__)
         if (strcasecmp(user_min_paging_mode_s, "4level") == 0) {
             user_min_paging_mode = PAGING_MODE_X86_64_4LVL;
         } else if (strcasecmp(user_min_paging_mode_s, "5level") == 0) {
             user_min_paging_mode = PAGING_MODE_X86_64_5LVL;
         }
-#elif defined(__aarch64__)
-        if (strcasecmp(user_min_paging_mode_s, "4level") == 0) {
-            user_min_paging_mode = PAGING_MODE_AARCH64_4LVL;
-        } else if (strcasecmp(user_min_paging_mode_s, "5level") == 0) {
-            user_min_paging_mode = PAGING_MODE_AARCH64_5LVL;
-        }
-#elif defined(__riscv)
-        if (strcasecmp(user_min_paging_mode_s, "sv39") == 0) {
-            user_min_paging_mode = PAGING_MODE_RISCV_SV39;
-        } else if (strcasecmp(user_min_paging_mode_s, "sv48") == 0) {
-            user_min_paging_mode = PAGING_MODE_RISCV_SV48;
-        } else if (strcasecmp(user_min_paging_mode_s, "sv57") == 0) {
-            user_min_paging_mode = PAGING_MODE_RISCV_SV57;
-        }
-#elif defined(__loongarch64)
-        if (strcasecmp(user_min_paging_mode_s, "4level") == 0) {
-            user_min_paging_mode = PAGING_MODE_LOONGARCH64_4LVL;
-        }
-#endif
         else {
             panic(true, "limine: Invalid MIN_PAGING_MODE: `%s`", user_min_paging_mode_s);
         }
@@ -1027,23 +817,10 @@ hhdm_fail:
         min_supported_paging_mode = user_min_paging_mode;
     }
 
-#if defined(__x86_64__) || defined(__i386__)
     paging_mode = PAGING_MODE_X86_64_4LVL;
-#elif defined(__riscv)
-    paging_mode = max_supported_paging_mode >= PAGING_MODE_RISCV_SV48 ? PAGING_MODE_RISCV_SV48 : PAGING_MODE_RISCV_SV39;
-#elif defined(__aarch64__)
-    paging_mode = PAGING_MODE_AARCH64_4LVL;
-#elif defined(__loongarch64)
-    paging_mode = PAGING_MODE_LOONGARCH64_4LVL;
-#endif
 
-#if defined(__riscv)
-#define paging_mode_limine_to_vmm(x) (PAGING_MODE_RISCV_SV39 + (x))
-#define paging_mode_vmm_to_limine(x) ((x) - PAGING_MODE_RISCV_SV39)
-#else
 #define paging_mode_limine_to_vmm(x) (x)
 #define paging_mode_vmm_to_limine(x) (x)
-#endif
 
     bool paging_mode_set = false;
 
@@ -1120,17 +897,6 @@ FEAT_END
         set_paging_mode(randomise_hhdm_base);
     }
 
-#if defined(__aarch64__)
-    uint64_t aa64mmfr0;
-    asm volatile ("mrs %0, id_aa64mmfr0_el1" : "=r" (aa64mmfr0));
-
-    uint64_t pa = aa64mmfr0 & 0xF;
-
-    uint64_t tsz = 64 - (paging_mode_va_bits(paging_mode) - 1);
-
-    // A 52-bit VA needs a TxSZ of 12, which is only in range under TCR_EL1.DS.
-    uint64_t ds = paging_mode == PAGING_MODE_AARCH64_5LVL;
-#endif
 
     struct limine_file *kf = ext_mem_alloc(sizeof(struct limine_file));
     *kf = get_file(kernel_file, cmdline);
@@ -1154,7 +920,6 @@ FEAT_START
 FEAT_END
 
     // x86-64 Keep IOMMU feature
-#if defined(__x86_64__) || defined(__i386__)
     bool keep_iommu = false;
 FEAT_START
     struct limine_x86_64_keep_iommu_request *keep_iommu_request =
@@ -1169,7 +934,6 @@ FEAT_START
     keep_iommu_request->response = reported_addr(keep_iommu_response);
     keep_iommu = true;
 FEAT_END
-#endif
 
     // Bootloader info feature
 FEAT_START
@@ -1181,8 +945,8 @@ FEAT_START
     struct limine_bootloader_info_response *bootloader_info_response =
         ext_mem_alloc(sizeof(struct limine_bootloader_info_response));
 
-    bootloader_info_response->name = reported_addr("Limine");
-    bootloader_info_response->version = reported_addr(LIMINE_VERSION);
+    bootloader_info_response->name = reported_addr("Initium");
+    bootloader_info_response->version = reported_addr(INITIUM_VERSION);
 
     bootloader_info_request->response = reported_addr(bootloader_info_response);
 FEAT_END
@@ -1796,7 +1560,6 @@ FEAT_START
 FEAT_END
 
     // Wrap-up stuff before memmap close
-#if defined(__x86_64__) || defined(__i386__)
     struct gdtr *local_gdt = ext_mem_alloc(sizeof(struct gdtr));
     local_gdt->limit = gdt.limit;
     uint64_t local_gdt_base = (uint64_t)gdt.ptr;
@@ -1805,76 +1568,15 @@ FEAT_END
 #if defined(__i386__)
     local_gdt->ptr_hi = local_gdt_base >> 32;
 #endif
-#endif
 
-#if defined(__aarch64__)
-    // Find the most restrictive caching mode from all framebuffers to use
-    uint64_t fb_attr = (uint64_t)-1;
-
-    for (size_t i = 0; i < fbs_count; i++) {
-        int el = current_el();
-        uint64_t res;
-
-        // Figure out the caching mode used for this particular framebuffer
-        if (el == 1) {
-            asm volatile (
-                    "at s1e1w, %1\n\t"
-                    "isb\n\t"
-                    "mrs %0, par_el1"
-                    : "=r"(res)
-                    : "r"(fbs[i].framebuffer_addr)
-                    : "memory");
-        } else if (el == 2) {
-            asm volatile (
-                    "at s1e2w, %1\n\t"
-                    "isb\n\t"
-                    "mrs %0, par_el1"
-                    : "=r"(res)
-                    : "r"(fbs[i].framebuffer_addr)
-                    : "memory");
-        } else {
-            panic(false, "Unexpected EL in limine_load");
-        }
-
-        if (res & 1)
-            panic(false, "Address translation for framebuffer failed");
-
-        uint64_t new_attr = res >> 56;
-
-        // Use whatever we find first
-        if (fb_attr == (uint64_t)-1)
-            fb_attr = new_attr;
-        // Prefer Device memory over Normal memory
-        else if ((fb_attr & 0b11110000) && !(new_attr & 0b11110000))
-            fb_attr = new_attr;
-        // Prefer tighter Device memory (lower values)
-        else if (!(fb_attr & 0b11110000) && !(new_attr & 0b11110000) && fb_attr > new_attr)
-            fb_attr = new_attr;
-        // Use Normal non-cacheable otherwise (avoid trying to figure out how to downgrade inner vs outer).
-        else if ((fb_attr & 0b11110000) && (new_attr & 0b11110000))
-            fb_attr = 0b01000100; // Inner&outer Non-cacheable
-        // Otherwise do nothing (fb_attr is already more restrictive than new_attr).
-    }
-
-    // If no framebuffers are found, just zero out the MAIR entry
-    if (fb_attr == (uint64_t)-1)
-        fb_attr = 0;
-#endif
 
     void *stack = ext_mem_alloc(stack_size) + stack_size;
 
     bool nx_available = true;
-#if defined(__x86_64__) || defined(__i386__)
     // Check if we have NX
     if (!cpuid(0x80000001, 0, &eax, &ebx, &ecx, &edx) || !(edx & (1 << 20))) {
         nx_available = false;
     }
-#elif defined(__loongarch64)
-    // The NX bit is only defined with execution protection (CPUCFG1.EP).
-    if (!(loongarch_cpucfg(1) & (1 << 22))) {
-        nx_available = false;
-    }
-#endif
 
     // TSC Frequency
 FEAT_START
@@ -1951,7 +1653,7 @@ FEAT_END
 
 #if defined(UEFI)
     // TPM event log feature. Processed last so GetEventLog snapshots a log
-    // containing all of Limine's extends; later extends would land in the
+    // containing all of Initium's extends; later extends would land in the
     // final-events table instead.
     struct limine_tpm_event_log_response *tpm_event_log_response = NULL;
 FEAT_START
@@ -1977,15 +1679,6 @@ FEAT_START
     tpm_event_log_request->response = reported_addr(tpm_event_log_response);
 FEAT_END
 
-#if defined(__aarch64__) || defined(__loongarch64)
-    // init_smp() runs once boot services are gone, where its device tree
-    // fallback could no longer open a file for itself. ACPI answers first, so a
-    // dtb_path this boot never reads must cost it the tree rather than the boot.
-    void *smp_dtb = NULL;
-    if (have_request(LIMINE_MP_REQUEST_ID)) {
-        smp_dtb = get_device_tree_blob(config, 0, false, false);
-    }
-#endif
 
     efi_leave_boot_services();
 
@@ -2045,7 +1738,6 @@ FEAT_START
 
     struct limine_mp_info *mp_info;
     size_t cpu_count;
-#if defined(__x86_64__) || defined(__i386__)
     smp_configure_apic = base_revision >= 5;
     uint32_t bsp_lapic_id;
     mp_info = init_smp(&cpu_count, &bsp_lapic_id,
@@ -2053,28 +1745,12 @@ FEAT_START
                         pagemap, mp_request->flags & LIMINE_MP_REQUEST_X86_64_X2APIC, nx_available,
                         direct_map_offset, true);
     bool x2apic_enabled = (mp_request->flags & LIMINE_MP_REQUEST_X86_64_X2APIC) && (rdmsr(0x1b) & (1 << 10));
-#elif defined(__aarch64__)
-    uint64_t bsp_mpidr;
-
-    mp_info = init_smp(smp_dtb, &cpu_count, &bsp_mpidr,
-                        pagemap, LIMINE_MAIR(fb_attr), LIMINE_TCR(tsz, pa, ds), LIMINE_SCTLR,
-                        direct_map_offset, drop_to_el1);
-#elif defined(__riscv)
-    mp_info = init_smp(&cpu_count, pagemap, direct_map_offset);
-#elif defined(__loongarch64)
-    uint32_t bsp_phys_id;
-    mp_info = init_smp(smp_dtb, &cpu_count, &bsp_phys_id, pagemap,
-                        direct_map_offset);
-#else
-#error Unknown architecture
-#endif
 
     // PROTOCOL.md promises a response whenever the request is supported, so
     // the BSP alone stands in where the CPUs could not be enumerated.
     if (mp_info == NULL) {
         mp_info = ext_mem_alloc(sizeof(struct limine_mp_info));
         cpu_count = 1;
-#if defined(__x86_64__) || defined(__i386__)
         // init_smp() can give up before it enables x2APIC. Without a local
         // APIC, the ID is the initial one that CPUID reports.
         bool have_lapic = lapic_check();
@@ -2087,41 +1763,12 @@ FEAT_START
             bsp_lapic_id = cpuid(1, 0, &eax, &ebx, &ecx, &edx) ? ebx >> 24 : 0;
         }
         mp_info->lapic_id = bsp_lapic_id;
-#elif defined(__aarch64__)
-        asm volatile ("mrs %0, mpidr_el1" : "=r"(bsp_mpidr));
-        // The affinity fields alone, as PROTOCOL.md has it.
-        bsp_mpidr &= 0xff00ffffff;
-        mp_info->mpidr = bsp_mpidr;
-#elif defined(__riscv)
-        mp_info->hartid = bsp_hartid;
-#elif defined(__loongarch64)
-        bsp_phys_id = csr_read32(0x20); // CSR.CPUID
-        mp_info->phys_id = bsp_phys_id;
-#else
-#error Unknown architecture
-#endif
     }
 
     for (size_t i = 0; i < cpu_count; i++) {
-#if defined(__x86_64__) || defined(__i386__)
         if (mp_info[i].lapic_id == bsp_lapic_id) {
             continue;
         }
-#elif defined(__aarch64__)
-        if (mp_info[i].mpidr == bsp_mpidr) {
-            continue;
-        }
-#elif defined(__riscv)
-        if (mp_info[i].hartid == bsp_hartid) {
-            continue;
-        }
-#elif defined(__loongarch64)
-        if (mp_info[i].phys_id == bsp_phys_id) {
-            continue;
-        }
-#else
-#error Unknown architecture
-#endif
 
         void *cpu_stack = ext_mem_alloc(stack_size) + stack_size;
         mp_info[i].reserved = reported_addr(cpu_stack);
@@ -2130,18 +1777,8 @@ FEAT_START
     struct limine_mp_response *mp_response =
         ext_mem_alloc(sizeof(struct limine_mp_response));
 
-#if defined(__x86_64__) || defined(__i386__)
     mp_response->flags |= x2apic_enabled ? LIMINE_MP_RESPONSE_X86_64_X2APIC : 0;
     mp_response->bsp_lapic_id = bsp_lapic_id;
-#elif defined(__aarch64__)
-    mp_response->bsp_mpidr = bsp_mpidr;
-#elif defined(__riscv)
-    mp_response->bsp_hartid = bsp_hartid;
-#elif defined(__loongarch64)
-    mp_response->bsp_phys_id = bsp_phys_id;
-#else
-#error Unknown architecture
-#endif
 
     uint64_t *mp_list = ext_mem_alloc_counted(cpu_count, sizeof(uint64_t));
     for (size_t i = 0; i < cpu_count; i++) {
@@ -2154,13 +1791,7 @@ FEAT_START
     mp_request->response = reported_addr(mp_response);
 FEAT_END
 
-#if defined(__aarch64__) || defined(__loongarch64)
-    if (smp_dtb != NULL) {
-        pmm_free(smp_dtb, fdt_totalsize(smp_dtb));
-    }
-#endif
 
-#if defined(__x86_64__) || defined(__i386__)
     // If there was no MP request, the kernel has no way to tell us it supports
     // x2APIC. Try to disable it as a courtesy, but do not panic if we cannot
     // since the kernel may be able to deal with it itself.
@@ -2172,20 +1803,7 @@ FEAT_END
             printv("limine: Firmware has x2APIC enabled and it could not be disabled\n");
         }
     }
-#endif
 
-#if defined(__riscv)
-    // RISC-V BSP Hart ID
-FEAT_START
-    struct limine_riscv_bsp_hartid_request *bsp_request = get_request(bsp_request, LIMINE_RISCV_BSP_HARTID_REQUEST_ID);
-    if (bsp_request == NULL) {
-        break;
-    }
-    struct limine_riscv_bsp_hartid_response *bsp_response = ext_mem_alloc(sizeof(struct limine_riscv_bsp_hartid_response));
-    bsp_response->bsp_hartid = bsp_hartid;
-    bsp_request->response = reported_addr(bsp_response);
-FEAT_END
-#endif
 
     // Memmap
 FEAT_START
@@ -2257,7 +1875,6 @@ FEAT_START
     memmap_request->response = reported_addr(memmap_response);
 FEAT_END
 
-#if defined(__x86_64__) || defined(__i386__)
 #if defined(BIOS)
     // If we're going 64, we might as well call this BIOS interrupt
     // to tell the BIOS that we are entering Long Mode, since it is in
@@ -2301,45 +1918,4 @@ FEAT_END
         (uint32_t)direct_map_offset, (uint32_t)(direct_map_offset >> 32),
         (uint32_t)base_revision
     );
-#elif defined(__aarch64__)
-    vmm_assert_4k_pages();
-
-    uint64_t reported_stack = reported_addr(stack);
-
-    if (perf_response != NULL) {
-        perf_response->exec_usec = rdtsc_usec();
-    }
-
-    if (want_el2) {
-        enter_in_el2(entry_point, reported_stack, LIMINE_SCTLR, LIMINE_MAIR(fb_attr), LIMINE_TCR(tsz, pa, ds),
-                     make_ttbr(pagemap, 0),
-                     make_ttbr(pagemap, 1),
-                     direct_map_offset);
-    } else {
-        enter_in_el1(entry_point, reported_stack, LIMINE_SCTLR, LIMINE_MAIR(fb_attr), LIMINE_TCR(tsz, pa, ds),
-                     make_ttbr(pagemap, 0),
-                     make_ttbr(pagemap, 1),
-                     direct_map_offset);
-    }
-#elif defined(__riscv)
-    uint64_t reported_stack = reported_addr(stack);
-    uint64_t satp = make_satp(pagemap.paging_mode, pagemap.top_level);
-
-    if (perf_response != NULL) {
-        perf_response->exec_usec = rdtsc_usec();
-    }
-
-    riscv_spinup(entry_point, reported_stack, satp, direct_map_offset);
-#elif defined(__loongarch64)
-    uint64_t reported_stack = reported_addr(stack);
-
-    if (perf_response != NULL) {
-        perf_response->exec_usec = rdtsc_usec();
-    }
-
-    loongarch_spinup(entry_point, reported_stack, (uint64_t)pagemap.pgd[0], (uint64_t)pagemap.pgd[1],
-                     direct_map_offset);
-#else
-#error Unknown architecture
-#endif
 }

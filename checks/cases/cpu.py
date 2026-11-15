@@ -2,7 +2,7 @@ from harness.api import check
 from harness.ports import X86_PORTS
 from cases._common import boot_entry, boot_kernel, check_report_clean, entry, screen_text, wait_panic
 
-# What Limine makes of the x86 CPU features it looks for.
+# What Initium makes of the x86 CPU features it looks for.
 
 
 @check(ports=['bios', 'uefi-ia32'], tags=['limine-protocol', 'cpu'])

@@ -122,7 +122,7 @@ _builtin_font = None
 
 
 def builtin_font():
-    """The font Limine draws its interface with, read from its source."""
+    """The font Initium draws its interface with, read from its source."""
     global _builtin_font
     if _builtin_font is None:
         with open(os.path.join(SRCDIR, 'common', 'lib', 'gterm.c')) as f:
@@ -410,7 +410,7 @@ VGA_PALETTE = [
 
 
 def decode_vga_text(mem, cols=80, rows=25):
-    """Decode a dump of VGA text memory (character, attribute pairs). Limine
+    """Decode a dump of VGA text memory (character, attribute pairs). Initium
     turns blinking off, which makes attribute bit 7 background intensity."""
     cells = []
     for i in range(cols * rows):

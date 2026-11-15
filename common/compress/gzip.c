@@ -1,7 +1,7 @@
-/* Limine glue around pdgzip: transparent gzip decompression layer over a
+/* Initium glue around pdgzip: transparent gzip decompression layer over a
  * file_handle.  The underlying decoder lives in common/compress/pdgzip.c
  * (imported by ./bootstrap from the upstream iczelia/pdgzip repo); this
- * file only wires pdgzip's streaming read-callback API into Limine's
+ * file only wires pdgzip's streaming read-callback API into Initium's
  * file_handle abstraction and adds support for random-access reads via
  * rewind-and-skip.
  */

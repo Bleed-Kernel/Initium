@@ -1537,12 +1537,6 @@ static const char *uefi_shell_filename(void) {
     return "shellx64.efi";
 #elif defined(__i386__)
     return "shellia32.efi";
-#elif defined(__aarch64__)
-    return "shellaa64.efi";
-#elif defined(__riscv)
-    return "shellriscv64.efi";
-#elif defined(__loongarch64)
-    return "shellloongarch64.efi";
 #else
 #error Unknown UEFI architecture
 #endif
@@ -1731,9 +1725,6 @@ noreturn void _menu(bool first_run) {
         }
     }
 
-#if defined(__riscv)
-    init_riscv(NULL);
-#endif
 
     char *quiet_str = config_get_value(NULL, 0, "QUIET");
     quiet = quiet_str != NULL && strcmp(quiet_str, "yes") == 0;
@@ -1810,7 +1801,7 @@ noreturn void _menu(bool first_run) {
     const char *raw = config_get_raw(&raw_size);
     if (raw != NULL) {
         tpm_measure(TPM_PCR_LOADED_IMAGES, TPM_EV_IPL,
-                    raw, raw_size, "limine_cfg", NULL);
+                    raw, raw_size, "initium_cfg", NULL);
     }
 #endif
 
@@ -1867,9 +1858,9 @@ noreturn void _menu(bool first_run) {
         {
             uint32_t eax, ebx, ecx, edx;
             if (!cpuid(0x80000001, 0, &eax, &ebx, &ecx, &edx) || !(edx & (1 << 29))) {
-                menu_branding = strdup("Limine " LIMINE_VERSION " (ia-32, BIOS)");
+                menu_branding = strdup("Initium " INITIUM_VERSION " (ia-32, BIOS)");
             } else {
-                menu_branding = strdup("Limine " LIMINE_VERSION " (x86-64, BIOS)");
+                menu_branding = strdup("Initium " INITIUM_VERSION " (x86-64, BIOS)");
             }
         }
 #elif defined(UEFI)
@@ -1877,21 +1868,15 @@ noreturn void _menu(bool first_run) {
         {
             uint32_t eax, ebx, ecx, edx;
             if (!cpuid(0x80000001, 0, &eax, &ebx, &ecx, &edx) || !(edx & (1 << 29))) {
-                menu_branding = strdup("Limine " LIMINE_VERSION " (ia-32, UEFI32)");
+                menu_branding = strdup("Initium " INITIUM_VERSION " (ia-32, UEFI32)");
             } else {
-                menu_branding = strdup("Limine " LIMINE_VERSION " (x86-64, UEFI32)");
+                menu_branding = strdup("Initium " INITIUM_VERSION " (x86-64, UEFI32)");
             }
         }
 #else
-        menu_branding = strdup("Limine " LIMINE_VERSION " ("
+        menu_branding = strdup("Initium " INITIUM_VERSION " ("
 #if defined(__x86_64__)
             "x86-64"
-#elif defined(__riscv)
-            "riscv64"
-#elif defined(__aarch64__)
-            "aarch64"
-#elif defined(__loongarch64)
-            "loongarch64"
 #endif
             ", UEFI)");
 #endif
@@ -1952,7 +1937,7 @@ noreturn void _menu(bool first_run) {
         if (remember_last != NULL && strcasecmp(remember_last, "yes") == 0) {
             char last_entry_path[MENU_PATH_MAX];
             size_t getvar_size = sizeof(last_entry_path);
-            if (gRT->get_variable(L"LimineLastBootedEntry",
+            if (gRT->get_variable(L"InitiumLastBootedEntry",
                                  &limine_efi_vendor_guid,
                                  NULL,
                                  &getvar_size,
@@ -2402,7 +2387,7 @@ timeout_aborted:
                 char entry_path[MENU_PATH_MAX];
                 size_t pos = 0;
                 get_entry_path(selected_menu_entry, entry_path, sizeof(entry_path), &pos);
-                gRT->set_variable(L"LimineLastBootedEntry",
+                gRT->set_variable(L"InitiumLastBootedEntry",
                                  &limine_efi_vendor_guid,
                                  EFI_VARIABLE_NON_VOLATILE | EFI_VARIABLE_BOOTSERVICE_ACCESS | EFI_VARIABLE_RUNTIME_ACCESS,
                                  strlen(entry_path) + 1,
@@ -2476,9 +2461,6 @@ noreturn void boot(char *config) {
     // Kill the mouse so no packets pile up.
     mouse_deinit();
 
-#if defined(__riscv)
-    init_riscv(config);
-#endif
 
     char *cmdline;
     {
@@ -2505,19 +2487,9 @@ noreturn void boot(char *config) {
     } else if (!strcmp(proto, "linux")) {
         linux_load(config, cmdline);
     } else if (!strcmp(proto, "multiboot1") || !strcmp(proto, "multiboot")) {
-#if defined(__x86_64__) || defined(__i386__)
         multiboot1_load(config, cmdline);
-#else
-        quiet = false;
-        print("Multiboot 1 is not available on non-x86 architectures.\n\n");
-#endif
     } else if (!strcmp(proto, "multiboot2")) {
-#if defined(__x86_64__) || defined(__i386__)
         multiboot2_load(config, cmdline);
-#else
-        quiet = false;
-        print("Multiboot 2 is not available on non-x86 architectures.\n\n");
-#endif
 #if defined(BIOS)
     } else if (!strcmp(proto, "bios_chainload")
             || !strcmp(proto, "bios")) {

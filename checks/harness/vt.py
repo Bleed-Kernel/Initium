@@ -9,7 +9,7 @@ DEFAULT_BG = 'default'
 
 
 class Terminal:
-    """Enough of a VT100/xterm to replay what Limine and edk2 send to a
+    """Enough of a VT100/xterm to replay what Initium and edk2 send to a
     serial line."""
 
     def __init__(self, cols=200, rows=60):

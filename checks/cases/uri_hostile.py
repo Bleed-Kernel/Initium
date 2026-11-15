@@ -2,7 +2,7 @@ from harness.api import check
 from harness.ports import ALL_PORTS
 from cases._common import boot_entry, entry, panics_in_turn
 
-# Module paths that are not URIs Limine can use: each panic names the fault
+# Module paths that are not URIs Initium can use: each panic names the fault
 # [intent], and the menu comes back.
 
 GUID = '01234567-89ab-cdef-0123-456789abcdef'

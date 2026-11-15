@@ -1089,7 +1089,7 @@ struct volume *volume_get_by_guid(struct guid *guid) {
 
 struct volume *volume_get_by_fslabel(char *fslabel) {
     for (size_t i = 0; i < volume_index_i; i++) {
-        // Both filesystems Limine reads a label from are case insensitive, and
+        // Both filesystems Initium reads a label from are case insensitive, and
         // both store labels upper-cased, so a literal compare would reject the
         // spelling a user reads off their own system.
         if (volume_index[i]->fslabel_valid

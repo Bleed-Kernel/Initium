@@ -5,8 +5,8 @@
 #include <stdint.h>
 #include <stdnoreturn.h>
 
-// The first member of the x86 zero page; non-x86 kernels get a copy through an
-// EFI configuration table. Fields Limine does not fill must stay zero.
+// The first member of the x86 zero page.
+// Fields Initium does not fill must stay zero.
 struct screen_info {
     uint8_t reserved_00[6];
     uint8_t orig_video_mode;

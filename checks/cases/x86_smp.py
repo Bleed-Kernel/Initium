@@ -43,8 +43,8 @@ REVERTED = 'Firmware had x2APIC enabled, reverted to xAPIC mode'
 
 
 def boot_through_probe(t, config, files, **machine):
-    """On UEFI, Limine started by the EFI probe, which first reports the APIC
-    base MSR as the firmware left it: Limine's own word on reverting x2APIC
+    """On UEFI, Initium started by the EFI probe, which first reports the APIC
+    base MSR as the firmware left it: Initium's own word on reverting x2APIC
     comes after boot services, out of the firmware console's reach."""
     from cases.chainload import probe_then_limine
     if not t.port.is_uefi:

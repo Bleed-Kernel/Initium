@@ -7,7 +7,7 @@ from harness.report import Report, fnv1a, unescape
 from cases._common import descriptor, entry, read, wait_panic
 
 # Multiboot 1: expectations marked [spec] come from the Multiboot
-# Specification 0.6.96, [intent] ones are choices Limine's code states.
+# Specification 0.6.96, [intent] ones are choices Initium's code states.
 
 MB1_MAGIC = 0x2badb002
 KERNEL_BASE = 0x300000
@@ -119,7 +119,7 @@ def check_mbi(t, r, cmdline, modules, kernel_range, elf=None, page_aligned_spec=
         t.expect_eq(h(r, 'mbi.boot_device'), 0x8000ffff,
                     '[spec] boot_device: drive 0x80, 0-based partition 0, the rest 0xff (GRUB\'s encoding)')
     t.check(flags & (1 << 9), '[intent] boot loader name given')
-    t.check(unescape(r['mbi.boot_loader_name']).startswith('Limine '),
+    t.check(unescape(r['mbi.boot_loader_name']).startswith('Initium '),
             f'[intent] boot loader name: {r.get("mbi.boot_loader_name")}')
 
     claimed = [(lo, hi, 'kernel')]
@@ -296,8 +296,8 @@ def mb1_pic(t):
 
 @check(ports=['bios'], tags=['multiboot1', 'hostile'])
 def mb1_a20_turned_off(t):
-    """[spec] A20 is enabled for the kernel even when Limine is started with
-    the gate off, a boot record before it having turned it off: Limine turns
+    """[spec] A20 is enabled for the kernel even when Initium is started with
+    the gate off, a boot record before it having turned it off: Initium turns
     it on through the BIOS, and through the keyboard controller when the
     BIOS refuses [intent]. (Its last resort, port 0x92 with no keyboard
     controller, QEMU cannot give: its port 0x92 goes with its 8042.)"""
@@ -312,7 +312,7 @@ def mb1_a20_turned_off(t):
             f.write(read(t.env.payload('bios', record)).ljust(1 << 20, b'\0'))
         m = t.boot(drives=[Drive(path, bootindex=1), Drive(limine.path)])
         r = mb1_report(t, m)
-        t.check('A20 off before Limine' in m.stream('debugcon').text(), f'{what}: the gate off as Limine started')
+        t.check('A20 off before Initium' in m.stream('debugcon').text(), f'{what}: the gate off as Initium started')
         t.expect_eq(h(r, 'a20'), 1, f'{what}: A20 enabled')
         m.stop()
 
@@ -470,7 +470,7 @@ def check_mb2_info(t, r, cmdline, modules, kernel_range, elf=None, page_aligned_
     t.check(1 in types, '[spec] command line tag, requested')
     t.expect_eq(unescape(r['cmdline']), cmdline, '[spec] command line')
     t.check(2 in types, '[spec] boot loader name tag, requested')
-    t.check(unescape(r['boot_loader_name']).startswith('Limine '), f'[intent] boot loader name: {r.get("boot_loader_name")}')
+    t.check(unescape(r['boot_loader_name']).startswith('Initium '), f'[intent] boot loader name: {r.get("boot_loader_name")}')
 
     t.check(4 in types, '[spec] basic memory information, requested')
     t.check(h(r, 'mem_lower') <= 640, '[spec] mem_lower at most 640KiB')
@@ -581,7 +581,7 @@ MB2_MODULES = [('/boot/m1.bin', b'multiboot2 module one\n' * 70, 'module one'),
 
 @check(ports=X86_PORTS, tags=['multiboot2'])
 def mb2_elf(t):
-    """An ELF kernel asking for every information tag Limine supports."""
+    """An ELF kernel asking for every information tag Initium supports."""
     path = mb2_kernel(t)
     m = boot_mb2(t, HostFile(path), modules=MB2_MODULES)
     r = mb2_report(t, m)
@@ -688,7 +688,7 @@ def mb2_no_video_request(t):
 
 @check(ports=X86_PORTS, tags=['multiboot2'])
 def mb2_efi_boot_services(t):
-    """[intent] Limine always terminates boot services: an optional EFI boot
+    """[intent] Initium always terminates boot services: an optional EFI boot
     services tag is passed over, a required one refused."""
     m = boot_mb2(t, HostFile(mb2_kernel(t, 'efibs')))
     r = mb2_report(t, m)
@@ -787,7 +787,7 @@ def mb2_errors(t):
          'multiboot2: Illegal bss end address'),
         (patched(base, addr + 8, None, None, KERNEL_BASE + len(base) + 8),
          'multiboot2: load_src + load_size exceeds kernel file size'),
-        # The entry address tag made an optional one Limine does not know.
+        # The entry address tag made an optional one Initium does not know.
         (patched(base, entry_tag, 0x18000), 'multiboot2: Using address tag but entry address tag missing'),
         (patched(base, entry_tag + 8, KERNEL_BASE + len(base) + 0x1000),
          'multiboot2: Entry point is outside the executable'),

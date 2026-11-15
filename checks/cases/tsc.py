@@ -9,7 +9,7 @@ from harness.env import SRCDIR
 from harness.report import Report
 from cases._common import boot_entry, check_report_clean, entry
 
-# BIOS Limine's TSC calibration, the C of common/sys/cpu.s2.c, built for the
+# BIOS Initium's TSC calibration, the C of common/sys/cpu.s2.c, built for the
 # build machine and run on the machine checks/sim/tsc.c simulates: a TSC, an
 # ACPI PM timer, PIT channel 2 and port 0x61, with stalls put where QEMU cannot
 # put them, inside a port access once the device has answered.
@@ -103,7 +103,7 @@ def tsc_calibration_crystal(t):
     the measurement to 1% [intent]."""
     r = simulate(t)
     if r['crystal'] != '1':
-        t.skip('the crystal clocks are looked up on x86 builds of Limine only')
+        t.skip('the crystal clocks are looked up on x86 builds of Initium only')
     for name in ('skylake', 'xeon_scalable', 'xeon_w', 'goldmont'):
         (key, found, wanted), = frequencies(r, f'crystal.{name}')
         t.expect_eq(found, wanted, key)
@@ -145,7 +145,7 @@ TRACED_WRITE = re.compile(r"addr 0x([0-9a-f]+) value 0x([0-9a-f]+) size 1 name '
 def tsc_pit_port61(t):
     """With no ACPI, and so no PM timer, the PIT calibration writes port 0x61
     with bits 7:4, read-only status, as 0 (Intel ICH10 319973-003, 13.7.1)
-    [spec]. Limine's writes are those QEMU traces from the closing of the
+    [spec]. Initium's writes are those QEMU traces from the closing of the
     gate before its first count of 11932 (0x2e9c) on [intent]."""
     trace = t.path('writes.log')
     m, _ = boot_entry(t, 'timeout: 0\n' + entry('Test', path='boot():/boot/kernel.elf', cmdline='x'),

@@ -5,7 +5,7 @@ from harness.api import check
 from harness.media import HostFile
 from cases._common import boot_entry, check_report_clean, entry, kernel_file
 
-# Remapping units that Limine turns off at hand-off without the Keep IOMMU
+# Remapping units that Initium turns off at hand-off without the Keep IOMMU
 # request and that do not do as told: listed by a DMAR or IVRS table given to
 # QEMU, at registers that do not answer or that memory stands in for.
 
@@ -63,7 +63,7 @@ def iommu_unit_not_answering(t):
             t.expect_eq(r['x86.vtd.0.gsts'], 'ffffffff', 'VT-d: the unit reads all ones')
         else:
             t.expect_eq(r['x86.amdvi.0'].split()[3], 'ffffffffffffffff', 'AMD-Vi: the unit reads all ones')
-        # Past ExitBootServices(), UEFI Limine has nowhere to print to.
+        # Past ExitBootServices(), UEFI Initium has nowhere to print to.
         if not t.port.is_uefi:
             t.check(f'iommu: {label} unit at {NOT_ANSWERING:#x} does not answer, skipped'
                     in t.serial_plain(m), f'{label}: the message on the serial line')

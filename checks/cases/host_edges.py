@@ -5,7 +5,7 @@ import zlib
 
 from harness.api import check
 from harness.media import BASIC_DATA_TYPE, BIOS_BOOT_TYPE, Disk, HostFile, Iso, Part, Tree
-from cases.host import limine, read
+from cases.host import initium, read
 
 # What the host tool refuses, and what it does with what it is not given
 # whole: its options, the uninstall data it keeps, the partition tables it
@@ -102,45 +102,45 @@ def gpt_entries(data, lba=1):
 
 
 def install(t, path, *args):
-    return limine(t, 'bios-install', path, *args)
+    return initium(t, 'bios-install', path, *args)
 
 
 @check(ports=['bios'], tags=['host'])
 def host_cli_edges(t):
     """Each command's --help, and the arguments each refuses."""
-    code, out, err = limine(t)
+    code, out, err = initium(t)
     t.check(code != 0 and out.startswith('usage: '), f'no command: usage: {out!r}')
-    code, out, err = limine(t, 'frobnicate')
+    code, out, err = initium(t, 'frobnicate')
     t.check(code != 0 and out.startswith('usage: '), f'an unknown command: usage: {out!r}')
     for args in (('help',), ('-h',)):
-        code, out, err = limine(t, *args)
+        code, out, err = initium(t, *args)
         t.check(code == 0 and 'Commands: ' in out, f'{args}: usage: {out!r}')
-    code, out, err = limine(t, 'version', '--version-only')
-    t.check(code == 0 and out.count('\n') == 1 and not out.startswith('Limine'), f'--version-only: {out!r}')
+    code, out, err = initium(t, 'version', '--version-only')
+    t.check(code == 0 and out.count('\n') == 1 and not out.startswith('Initium'), f'--version-only: {out!r}')
     for args, ok in ((('version', '--help'), True), (('version', '-h'), True), (('version', '--bogus'), False)):
-        code, out, err = limine(t, *args)
+        code, out, err = initium(t, *args)
         t.check((code == 0) == ok and out.startswith('usage: '), f'{args}: usage, exit {code}')
     for flag in ('--help', '-h'):
-        code, out, err = limine(t, 'bios-install', flag)
+        code, out, err = initium(t, 'bios-install', flag)
         t.check(code == 0 and out.startswith('usage: '), f'bios-install {flag}: usage, exit {code}')
 
     missing = t.path('missing.img')
-    code, out, err = limine(t, 'bios-install', '--force', '--force', missing)
+    code, out, err = initium(t, 'bios-install', '--force', '--force', missing)
     t.check(code != 0 and 'warning: --force already set.' in err and 'No such file or directory' in err,
             f'[intent] --force twice, then a device that is not there: {err!r}')
-    code, out, err = limine(t, 'bios-install', '--uninstall', '--uninstall', '--uninstall-data-file=a',
+    code, out, err = initium(t, 'bios-install', '--uninstall', '--uninstall', '--uninstall-data-file=a',
                             '--uninstall-data-file=b', missing)
     t.check(code != 0 and 'warning: --uninstall already set.' in err
             and 'warning: --uninstall-data-file already set. Overriding...' in err,
             f'[intent] repeated options warned about: {err!r}')
-    code, out, err = limine(t, 'bios-install', '--uninstall-data-file=', missing)
+    code, out, err = initium(t, 'bios-install', '--uninstall-data-file=', missing)
     t.check(code != 0 and 'Uninstall data file has a zero-length name' in err, f'[intent] empty name: {err!r}')
     disk = mbr_disk(t, 'mbr.img')
     before = read(disk)
-    code, out, err = limine(t, 'bios-install', disk, '--bogus')
+    code, out, err = initium(t, 'bios-install', disk, '--bogus')
     t.check(code != 0 and out.startswith('usage: ') and read(disk) == before,
             f'[intent] an option after the device: usage, the disk untouched: {out!r}')
-    code, out, err = limine(t, 'bios-install', write(t, 'tiny.img', bytes(100)))
+    code, out, err = initium(t, 'bios-install', write(t, 'tiny.img', bytes(100)))
     t.check(code != 0 and "Couldn't determine block size of device" in err, f'[intent] under a sector: {err!r}')
 
 
@@ -150,10 +150,10 @@ def host_enroll_config_edges(t):
     any length but a BLAKE2b one, or with a non-hexadecimal digit, a file it
     cannot seek, or too small to hold a hash, or with no hash slot [intent]."""
     good = 'ab' * 64
-    code, out, err = limine(t, 'enroll-config', '--help')
+    code, out, err = initium(t, 'enroll-config', '--help')
     t.check(code == 0 and out.startswith('usage: '), f'--help: {out!r}')
     for args in (('-x',), (), ('file',), ('--reset',), ('a', 'b', 'c')):
-        code, out, err = limine(t, 'enroll-config', *args)
+        code, out, err = initium(t, 'enroll-config', *args)
         t.check(code != 0 and out.startswith('usage: '), f'{args}: usage, exit {code}')
     slot = b'++CONFIG_B2SUM_SIGNATURE++' + b'0' * 128
     target = write(t, 'small-slot.bin', b'\0' * 64 + slot + b'\0' * 256)
@@ -168,9 +168,9 @@ def host_enroll_config_edges(t):
     os.mkfifo(fifo)
     cases.append(((fifo, good), 'enroll_config(): fseek()'))
     for args, message in cases:
-        code, out, err = limine(t, 'enroll-config', *args)
+        code, out, err = initium(t, 'enroll-config', *args)
         t.check(code != 0 and message in err, f'{os.path.basename(args[0])}: {message}: {err!r}')
-    code, out, err = limine(t, 'enroll-config', target, good)
+    code, out, err = initium(t, 'enroll-config', target, good)
     t.check(code == 0 and slot.replace(b'0' * 128, good.encode()) in read(target),
             f'a BLAKE2b hash is written into the slot: {err!r}')
 
@@ -204,22 +204,22 @@ def host_uninstall_data_edges(t):
     ]
     for name, data, message in cases:
         path = t.path(f'{name}.bin') if data is None else write(t, f'{name}.bin', data)
-        code, out, err = limine(t, 'bios-install', '--uninstall', f'--uninstall-data-file={path}', disk)
+        code, out, err = initium(t, 'bios-install', '--uninstall', f'--uninstall-data-file={path}', disk)
         t.check(code != 0 and message in err and read(disk) == before, f'{name}: {message}: {err!r}')
 
     short_disk = write(t, 'short.img', bytes(1024))
     path = write(t, 'past-end.bin', uninstall_data((1 << 20, b'x' * 16)))
-    code, out, err = limine(t, 'bios-install', '--uninstall', f'--uninstall-data-file={path}', short_disk)
+    code, out, err = initium(t, 'bios-install', '--uninstall', f'--uninstall-data-file={path}', short_disk)
     t.check(code != 0 and 'Uninstall data index 0 failed to write, retrying...' in err
             and 'warning: Retry failed.' in err and 'Some data failed to be uninstalled correctly' in err,
             f'past the end of the device: retried once, then failed: {err!r}')
     if os.path.exists('/dev/full'):
         path = write(t, 'full.bin', uninstall_data((0, b'x' * 16)))
-        code, out, err = limine(t, 'bios-install', '--uninstall', f'--uninstall-data-file={path}', '/dev/full')
+        code, out, err = initium(t, 'bios-install', '--uninstall', f'--uninstall-data-file={path}', '/dev/full')
         t.check(code != 0 and 'Device cache flush failure. Uninstall may be incomplete.' in err,
                 f'a device that takes no writes: {err!r}')
         path = write(t, 'full2.bin', uninstall_data((0, b'x' * 16), (4096, b'y' * 16)))
-        code, out, err = limine(t, 'bios-install', '--uninstall', f'--uninstall-data-file={path}', '/dev/full')
+        code, out, err = initium(t, 'bios-install', '--uninstall', f'--uninstall-data-file={path}', '/dev/full')
         t.check(code != 0 and 'Uninstall data index 1 failed to write, retrying...' in err,
                 f'and a second block, which first has to write the first back: {err!r}')
 
@@ -375,13 +375,13 @@ def host_gpt_checks(t):
 def hybrid_iso(t, name):
     """A hybrid ISO as USAGE.md makes one, before bios-install: the GPT in it
     is the one xorriso writes."""
-    files = ('limine-bios.sys', 'limine-bios-cd.bin', 'limine-uefi-cd.bin')
+    files = ('initium-bios.sys', 'initium-bios-cd.bin', 'initium-uefi-cd.bin')
     t.skip_unless_built(*files)
     tree = Tree()
     for f in files:
         tree.add('/boot/' + f, HostFile(t.env.bin(f)))
     path = t.path(name)
-    Iso(tree, bios_boot='/boot/limine-bios-cd.bin', uefi_boot='/boot/limine-uefi-cd.bin').build(path, t.workdir)
+    Iso(tree, bios_boot='/boot/initium-bios-cd.bin', uefi_boot='/boot/initium-uefi-cd.bin').build(path, t.workdir)
     return path
 
 

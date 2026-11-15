@@ -1,5 +1,5 @@
 ; A flat Multiboot 2 image whose header, with address and entry address tags
-; and 64 bytes long, sits at HEADER_OFFSET in the file: what Limine accepts
+; and 64 bytes long, sits at HEADER_OFFSET in the file: what Initium accepts
 ; around the end of the first 32768 bytes. It only says that it ran.
 
 bits 32

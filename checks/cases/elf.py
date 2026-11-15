@@ -7,11 +7,10 @@ from harness.ports import ALL_PORTS
 from cases._common import boot_entry, entry, panics_in_turn
 
 # Spoilt ELF executables for the Limine protocol, each made to fail one check
-# of Limine's loader and no other first; the messages are Limine's own
+# of Initium's loader and no other first; the messages are Initium's own
 # [intent]. Where a file breaks the ELF gABI 4.3 itself, that is noted.
 
-WRONG_MACHINE = {'x86_64': 'elf: Not an x86-64 ELF file.', 'aarch64': 'elf: Not an aarch64 ELF file.',
-                 'riscv64': 'elf: Not a riscv64 ELF file.', 'loongarch64': 'elf: Not a loongarch64 ELF file.'}
+WRONG_MACHINE = {'x86_64': 'elf: Not an x86-64 ELF file.'}
 UNKNOWN = 'limine: Unknown kernel executable format'
 OUTSIDE = 0x9000000
 STB_GLOBAL, STB_WEAK = 1, 2
@@ -28,7 +27,7 @@ def table(name, offset):
 
 def hostile_images(arch, bits32):
     none, relative, jump_slot, abs64 = elf.RELOCS[elf.MACHINES[arch]]
-    other = 183 if arch == 'x86_64' else 62
+    other = 183  # any machine but x86-64
     s = elf.synthetic(arch)
     size = len(s.data)
     d = elf.synthetic(arch, etype=ET_DYN, base=0, dynamic=[])
@@ -39,10 +38,8 @@ def hostile_images(arch, bits32):
     cases = [
         ('big-endian', s.patched(ei_data=2), 'elf: Not a Little-endian ELF file.'),
         ('another machine', s.patched(e_machine=other), WRONG_MACHINE[arch]),
-        # x86-64 and aarch64 exist only as ELFCLASS64, so such a file is no
-        # ELF Limine knows; RISC-V and LoongArch have 32-bit forms.
-        ('32-bit class', s.patched(ei_class=1),
-         UNKNOWN if arch in ('x86_64', 'aarch64') else WRONG_MACHINE[arch]),
+        # x86-64 exists only as ELFCLASS64, so such a file is no ELF Initium knows.
+        ('32-bit class', s.patched(ei_class=1), UNKNOWN),
         ('unaligned program headers', s.patched(e_phoff=68), 'elf: Header table is not naturally aligned in the file'),
         ('unaligned header size', s.patched(e_phentsize=60), 'elf: Header table is not naturally aligned in the file'),
         ('relocatable object', s.patched(e_type=1), 'elf: ELF file not of type ET_EXEC nor ET_DYN'),

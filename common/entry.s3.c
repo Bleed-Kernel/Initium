@@ -54,9 +54,7 @@ noreturn void uefi_entry(efi_handle image_handle, struct efi_system_table *syste
         print("WARNING: Failed to disable watchdog timer!\n");
     }
 
-#if defined(__x86_64__) || defined(__i386__)
     init_gdt();
-#endif
 #if defined(__x86_64__)
     // Stage the below-4GiB handoff stub while allocations are still permitted.
     prepare_spinup_tramp();
@@ -89,7 +87,7 @@ noreturn void uefi_entry(efi_handle image_handle, struct efi_system_table *syste
         if (current_handle == NULL) {
 could_not_match:
             print("WARNING: Could not meaningfully match the boot device handle with a volume.\n");
-            print("         Using the first volume containing a Limine configuration!\n");
+            print("         Using the first volume containing a Initium configuration!\n");
             print("\n");
             print("THIS IS A BUG! Please report this issue upstream.\n");
             print("Press any key to continue...\n");
@@ -108,13 +106,13 @@ could_not_match:
                 if (
                  false
 #if defined(UEFI)
-                 || (f = fopen(volume_index[i], "/EFI/limine/limine.conf")) != NULL
-                 || (f = fopen(volume_index[i], "/EFI/BOOT/limine.conf")) != NULL
+                 || (f = fopen(volume_index[i], "/EFI/initium/initium.conf")) != NULL
+                 || (f = fopen(volume_index[i], "/EFI/BOOT/initium.conf")) != NULL
 #endif
-                 || (f = fopen(volume_index[i], "/boot/limine/limine.conf")) != NULL
-                 || (f = fopen(volume_index[i], "/boot/limine.conf")) != NULL
-                 || (f = fopen(volume_index[i], "/limine/limine.conf")) != NULL
-                 || (f = fopen(volume_index[i], "/limine.conf")) != NULL
+                 || (f = fopen(volume_index[i], "/boot/initium/initium.conf")) != NULL
+                 || (f = fopen(volume_index[i], "/boot/initium.conf")) != NULL
+                 || (f = fopen(volume_index[i], "/initium/initium.conf")) != NULL
+                 || (f = fopen(volume_index[i], "/initium.conf")) != NULL
                 ) {
                     goto opened;
                 }
@@ -140,7 +138,7 @@ opened:
                 stage3_common();
             }
 
-            panic(false, "No volume contained a Limine configuration file");
+            panic(false, "No volume contained a Initium configuration file");
         }
 
         struct efi_guid loaded_img_prot_guid = EFI_LOADED_IMAGE_PROTOCOL_GUID;
@@ -166,66 +164,11 @@ opened:
 }
 #endif
 
-#if defined(__riscv) && defined(UEFI)
-// Firmware predating RISCV_EFI_BOOT_PROTOCOL passes the boot hart in the
-// device tree it publishes instead.
-static bool get_dtb_boot_hartid(size_t *hartid) {
-    struct efi_guid dtb_guid = EFI_DTB_TABLE_GUID;
-    void *dtb = NULL;
-
-    for (size_t i = 0; i < gST->number_of_table_entries; i++) {
-        struct efi_configuration_table *table = &gST->configuration_table[i];
-        if (memcmp(&table->vendor_guid, &dtb_guid, sizeof(struct efi_guid)) == 0) {
-            dtb = table->vendor_table;
-            break;
-        }
-    }
-
-    if (dtb == NULL || fdt_check_header(dtb) != 0) {
-        return false;
-    }
-
-    int chosen = fdt_path_offset(dtb, "/chosen");
-    if (chosen < 0) {
-        return false;
-    }
-
-    int len;
-    const void *prop = fdt_getprop(dtb, chosen, "boot-hartid", &len);
-    if (prop == NULL) {
-        return false;
-    }
-
-    if (len == 8) {
-        *hartid = fdt64_ld(prop);
-    } else if (len == 4) {
-        *hartid = fdt32_ld(prop);
-    } else {
-        return false;
-    }
-
-    return true;
-}
-#endif
 
 noreturn void stage3_common(void) {
-#if defined(__x86_64__) || defined(__i386__)
     init_flush_irqs();
     init_io_apics();
-#endif
 
-#if defined(__riscv)
-#if defined(UEFI)
-    struct efi_riscv_efi_boot_protocol *rv_proto = get_riscv_boot_protocol();
-    if (rv_proto == NULL || rv_proto->get_boot_hart_id(rv_proto, &bsp_hartid) != EFI_SUCCESS) {
-        if (!get_dtb_boot_hartid(&bsp_hartid)) {
-            panic(false, "failed to get BSP's hartid");
-        }
-    }
-#else
-#error riscv: only UEFI is supported
-#endif
-#endif
 
     term_notready();
 

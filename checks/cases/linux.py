@@ -1,5 +1,3 @@
-import os
-import struct
 
 from harness.api import check
 from harness import efivars
@@ -7,37 +5,6 @@ from harness.media import HostFile, Tree
 from harness.ports import UEFI_PORTS
 from harness.report import Report, fnv1a, unescape
 from cases._common import descriptor, entry, wait_panic, wait_done_or_panic
-
-NON_X86 = ['uefi-aarch64', 'uefi-riscv64', 'uefi-loongarch64']
-STUB_ARCH = {'uefi-aarch64': 'aarch64', 'uefi-riscv64': 'riscv64', 'uefi-loongarch64': 'loongarch64'}
-
-
-def stub(t, flavour='default'):
-    return HostFile(t.env.payload('linux', STUB_ARCH[t.port.name], flavour, 'Image'))
-
-
-def boot_linux(t, cmdline='console=ttyS0 root=/dev/vda1 rw', modules=(), extra='', globals_='',
-               files=None, flavour='default', **machine):
-    tree = Tree()
-    tree.add('/Image', stub(t, flavour))
-    mods = []
-    for path, data in modules:
-        tree.add(path, data)
-        mods.append((f'boot():{path}', None))
-    for path, data in (files or {}).items():
-        tree.add(path, data)
-    config = 'timeout: 0\n' + globals_ + entry('Linux', protocol='linux', path='boot():/Image',
-                                                cmdline=cmdline, modules=mods, extra=extra)
-    t.limine_files(config, tree)
-    disk = t.boot_disk(tree)
-    m = t.boot(disk, **machine)
-    return m
-
-
-def stub_report(t, m):
-    m.wait_for('serial', 'E DONE', 60)
-    return Report(m.stream('serial').text(), 'B LINUX-STUB')
-
 
 def initrd_image(modules):
     """What the kernel sees: the modules back to back, each 4-byte padded."""
@@ -47,196 +14,8 @@ def initrd_image(modules):
     return out
 
 
-def check_common(t, r, cmdline, modules):
-    """The device tree /chosen and EFI tables every non-x86 Linux boot gets."""
-    arch = t.port.arch
-    if arch != 'loongarch64':
-        t.expect_eq(r['dtb.magic'], 'ok', 'device tree passed')
-        t.expect_eq(int(r['dtb.memory_nodes'], 16), 0, 'memory nodes removed')
-        t.expect_eq(unescape(r['chosen.bootargs']), cmdline, '/chosen/bootargs')
-        t.expect_eq(int(r['chosen.linux,uefi-secure-boot'], 16), 2, 'Secure Boot disabled')
-        for prop in ('linux,uefi-system-table', 'linux,uefi-mmap-start', 'linux,uefi-mmap-size',
-                     'linux,uefi-mmap-desc-size', 'linux,uefi-mmap-desc-ver'):
-            t.check(f'chosen.{prop}' in r, f'/chosen/{prop} present')
-        t.expect_eq(int(r['chosen.linux,uefi-mmap-desc-ver'], 16), 1, 'memory map descriptor version')
-        t.expect_eq(int(r['chosen.linux,uefi-mmap-size'], 16), int(r['boot_memmap.map_size'], 16),
-                    'memory map size agrees with the boot memmap table')
-    else:
-        t.expect_eq(unescape(r['cmdline']), cmdline, 'command line in a1')
-    t.check('efi.signature' in r and int(r['efi.signature'], 16) == 0x5453595320494249,
-            'EFI system table reachable')
-    tables = r.multi.get('efi.table', [])
-    if modules:
-        image = initrd_image(modules)
-        if arch != 'loongarch64':
-            start = int(r['chosen.linux,initrd-start'], 16)
-            end = int(r['chosen.linux,initrd-end'], 16)
-            t.expect_eq(end - start, len(image), 'initrd size in /chosen')
-            t.expect_eq(r['initrd.hash'], '0x' + fnv1a(image).lstrip('0'), 'initrd contents')
-            t.expect_eq(int(r['initrd_table.base'], 16), start, 'initrd table base')
-        t.expect_eq(int(r['initrd_table.size'], 16), len(image), 'initrd table size')
-        t.check(int(r['initrd_table.base'], 16) % 4096 == 0, 'initrd page aligned')
-    else:
-        t.check('chosen.linux,initrd-start' not in r, 'no initrd in /chosen without modules')
-        t.check('5568e427-68fc-4f3d-ac74-ca555231cc68' not in tables, 'no initrd table without modules')
-    t.check('800f683f-d08b-423a-a293-965c3c6fe2b4' in tables, 'boot memmap table installed')
-    t.expect_eq(int(r['boot_memmap.desc_size'], 16), 48, 'memmap descriptor size')
-    t.expect_eq((r['memreserve.capacity'], r['memreserve.count'], r['memreserve.next']),
-                ('0x0', '0x0', '0x0'), 'empty memory reservation table')
-    t.check('e03fc20a-85dc-406e-b90e-4ab502371d95' in tables, 'screen info table installed')
-    t.expect_eq(int(r['screen_info.isvga'], 16), 0x70, 'screen_info: EFI framebuffer')
-    t.expect_eq(int(r['screen_info.depth'], 16), 32, 'screen_info depth')
-
-
-@check(ports=NON_X86, tags=['linux'])
-def linux_handoff(t):
-    """The handoff Linux Documentation/arch/{arm64,loongarch}/booting.rst and
-    riscv/boot.rst ask for, and the tables passed with it."""
-    modules = [('/initrd1.img', b'initrd one\n' * 37 + b'x'), ('/initrd2.img', b'second initrd' * 50)]
-    cmdline = 'console=ttyS0 root=/dev/vda1 rw quiet'
-    m = boot_linux(t, cmdline, modules)
-    r = stub_report(t, m)
-    arch = t.port.arch
-    base = int(r['image_base'], 16)
-    if arch == 'aarch64':
-        t.check(int(r['x0'], 16) != 0, 'x0 holds the device tree')
-        t.expect_eq((r['x1'], r['x2'], r['x3']), ('0x0', '0x0', '0x0'), 'x1-x3 zero')
-        t.expect_eq(r['mmu'], '0x0', 'MMU off')
-        t.expect_eq(int(r['daif'], 16), 0x3c0, 'all exceptions masked')
-        t.expect_eq(int(r['el'], 16), 1, 'entered at EL1')
-        t.expect_eq(base % (2 << 20), 0, 'image 2MiB aligned (text_offset 0)')
-    elif arch == 'riscv64':
-        t.check(int(r['a1'], 16) != 0, 'a1 holds the device tree')
-        t.expect_eq(r['satp'], '0x0', 'paging off')
-        t.expect_eq((r['sstatus_sie'], r['sie']), ('0x0', '0x0'), 'interrupts off')
-        t.expect_eq(base % (2 << 20), 0x200000 % (2 << 20), 'image placed text_offset into a 2MiB block')
-    else:
-        t.expect_eq(r['a0'], '0x1', 'a0: booted by EFI')
-        t.expect_eq(int(r['crmd'], 16) & 4, 0, 'interrupts off')
-        t.expect_eq((r['dmw0'], r['dmw1'], r['dmw2'], r['dmw3']),
-                    ('0x8000000000000001', '0x9000000000000011', '0xa000000000000021', '0x0'),
-                    'DMW0-2 at 0x8, 0x9 and 0xa: uncached, cached, weakly-ordered uncached; DMW3 off')
-        t.expect_eq(base % (2 << 20), 0, 'image 2MiB aligned')
-    check_common(t, r, cmdline, modules)
-
-
-@check(ports=NON_X86, tags=['linux'])
-def linux_no_modules(t):
-    m = boot_linux(t, 'root=/dev/nothing')
-    r = stub_report(t, m)
-    check_common(t, r, 'root=/dev/nothing', [])
-
-
-@check(ports=['uefi-aarch64'], tags=['linux'])
-def linux_aarch64_el2(t):
-    """Firmware at EL2: Linux is entered there, MMU off."""
-    m = boot_linux(t, 'x', machine_opts=['virtualization=on'], cpu='max')
-    r = stub_report(t, m)
-    t.expect_eq(int(r['el'], 16), 2, 'entered at EL2')
-    t.expect_eq(r['mmu'], '0x0', 'MMU off')
-    check_common(t, r, 'x', [])
-
-
-@check(ports=['uefi-aarch64'], tags=['linux'])
-def linux_aarch64_placement(t):
-    """With the header's physical placement flag the image may go anywhere;
-    either way it is 2MiB aligned."""
-    m = boot_linux(t, 'x', flavour='anywhere', modules=[('/i', b'abc')])
-    r = stub_report(t, m)
-    t.expect_eq(int(r['image_base'], 16) % (2 << 20), 0, 'image 2MiB aligned')
-    check_common(t, r, 'x', [('/i', b'abc')])
-
-
-@check(ports=NON_X86, tags=['linux', 'hostile'])
-def linux_virtual_address_map_refused(t):
-    """When SetVirtualAddressMap() fails, here made to by the EFI probe that
-    starts Limine, the kernel is booted without runtime services: each
-    runtime descriptor it gets has an all-ones virtual address, which kernels
-    take for no mapping. A LoongArch kernel uses the runtime services
-    regardless, so there Limine refuses to boot instead [intent]."""
-    from cases.chainload import probe_then_limine
-    m = probe_then_limine(t, 'name:svam svamfail',
-                          'timeout: 0\n' + entry('Linux', protocol='linux', path='boot():/Image', cmdline='x'),
-                          {'/Image': stub(t)})
-    if t.port.name == 'uefi-loongarch64':
-        msg, _ = wait_panic(t, m)
-        t.check(msg.startswith('linux: failed to set UEFI virtual address map'), f'refused: {msg!r}')
-        return
-    r = stub_report(t, m)
-    t.check('K svamfail=0' in m.stream('serial').text(), 'SetVirtualAddressMap() replaced')
-    runtime = int(r['boot_memmap.runtime'], 16)
-    t.check(runtime > 0, 'runtime descriptors in the map')
-    t.expect_eq(int(r['boot_memmap.runtime_unmapped'], 16), runtime, 'all of them unmapped')
-
-
-def patched_stub(t, patches, flavour='default'):
-    """The stub Image with (offset, format, value) patches to its header."""
-    with open(t.env.payload('linux', STUB_ARCH[t.port.name], flavour, 'Image'), 'rb') as f:
-        image = bytearray(f.read())
-    for off, fmt, value in patches:
-        struct.pack_into(fmt, image, off, value)
-    return bytes(image)
-
-
-@check(ports=['uefi-aarch64'], tags=['linux'])
-def linux_aarch64_pre_3_17_header(t):
-    """[spec] An image_size of zero marks a header from before v3.17, whose
-    text_offset is 0x80000 (Linux Documentation/arch/arm64/booting.rst)."""
-    m = boot_linux(t, 'x', files={'/Image': patched_stub(t, [(16, '<Q', 0)])})
-    r = stub_report(t, m)
-    t.expect_eq(int(r['image_base'], 16) % (2 << 20), 0x80000, 'the image 0x80000 into a 2MiB block')
-
-
-@check(ports=NON_X86, tags=['linux'])
-def linux_resolution(t):
-    """The entry's resolution option picks the mode the framebuffer described
-    to the kernel is in (CONFIG.md)."""
-    m = boot_linux(t, 'x', extra='    resolution: 800x600\n')
-    r = stub_report(t, m)
-    t.expect_eq((int(r['screen_info.width'], 16), int(r['screen_info.height'], 16)), (800, 600),
-                'screen_info describes an 800x600 framebuffer')
-
-
-@check(ports=NON_X86, tags=['linux'])
-def linux_errors(t):
-    cases = [
-        (entry('L', protocol='linux'), 'linux: Kernel path not specified'),
-        (entry('L', protocol='linux', path='boot():/nope'),
-         'linux: failed to open kernel `boot():/nope`. Is the path correct?'),
-        (entry('L', protocol='linux', path='boot():/tiny'),
-         'linux: kernel too small to contain a valid header'),
-        (entry('L', protocol='linux', path='boot():/garbage'),
-         'linux: invalid kernel image: kernel header magic does not match'),
-        (entry('L', protocol='linux', path='boot():/Image', modules=[('boot():/missing.img', None)]),
-         'linux: failed to open module `boot():/missing.img`. Is the path correct?'),
-    ]
-    if t.port.arch == 'loongarch64':
-        # [intent] The entry the header names must lie in the image.
-        cases.append((entry('L', protocol='linux', path='boot():/badentry'),
-                      'linux: kernel entry point lies outside the image'))
-    if t.port.arch == 'riscv64':
-        # [intent] Limine wants header version 0.2 at least.
-        cases.append((entry('L', protocol='linux', path='boot():/proto01'),
-                      'linux: invalid kernel image: protocols < 0.2 are not supported'))
-    for text, message in cases:
-        tree = Tree({'/Image': stub(t), '/tiny': b'\x00' * 32, '/garbage': b'\xab' * 4096})
-        if t.port.arch == 'riscv64':
-            tree.add('/proto01', stub(t, 'proto01'))
-        if t.port.arch == 'loongarch64':
-            path = t.env.payload('linux', 'loongarch64', 'default', 'Image')
-            with open(path, 'rb') as f:
-                load_offset = struct.unpack_from('<Q', f.read(32), 24)[0]
-            tree.add('/badentry', patched_stub(t, [(8, '<Q', load_offset + os.path.getsize(path) + 0x1000)]))
-        t.limine_files('timeout: 0\n' + text, tree)
-        m = t.boot(t.boot_disk(tree))
-        msg, _ = wait_panic(t, m)
-        t.expect_eq(msg, message, text.split('\n')[2].strip() if '\n' in text else text)
-        m.stop()
-
-
-# x86: a bzImage stand-in reporting registers and the zero page on port 0xe9.
 # Expectations marked [spec] come from Linux Documentation/arch/x86/boot.rst
-# (boot protocol 2.15) and zero-page.rst, [intent] ones are choices Limine's
+# (boot protocol 2.15) and zero-page.rst, [intent] ones are choices Initium's
 # code states.
 
 X86 = ['bios', 'uefi-ia32', 'uefi-x86-64']
@@ -523,7 +302,7 @@ def linux_random_seed(t):
     variable's bytes, which is deleted before they are used, or deleted unread
     past 1024 bytes; an earlier stage's table carried over into it [intent]."""
     from cases.chainload import probe_then_limine
-    path, kernel = ('/bzImage', bzimage(t)) if t.port.is_x86 else ('/Image', stub(t))
+    path, kernel = '/bzImage', bzimage(t)
     config = 'timeout: 0\n' + entry('Linux', protocol='linux', path=f'boot():{path}', cmdline='x')
 
     def table(seed=None, carried=0):
@@ -538,7 +317,7 @@ def linux_random_seed(t):
             tree.add(path, kernel)
             t.limine_files(config, tree)
             m = t.boot(t.boot_disk(tree), vars_file=store)
-        r = x86_report(t, m) if t.port.is_x86 else stub_report(t, m)
+        r = x86_report(t, m)
         size = int(r['rng_seed.size'], 16) if 'rng_seed.size' in r else 0
         m.stop()
         return size, ('RandomSeed', SEED_GUID) in efivars.read(m.workdir + '/vars.fd')

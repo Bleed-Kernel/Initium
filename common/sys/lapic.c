@@ -1,4 +1,3 @@
-#if defined(__x86_64__) || defined(__i386__)
 
 #include <stdint.h>
 #include <stddef.h>
@@ -624,4 +623,3 @@ void io_apic_mask_all(bool mask_nmi_and_extint) {
     }
 }
 
-#endif

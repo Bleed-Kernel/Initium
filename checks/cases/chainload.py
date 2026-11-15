@@ -4,8 +4,7 @@ from harness.ports import UEFI_PORTS
 from harness.report import unescape
 from cases._common import entry, wait_panic
 
-EFI_ARCH = {'uefi-ia32': 'ia32', 'uefi-x86-64': 'x86_64', 'uefi-aarch64': 'aarch64',
-            'uefi-riscv64': 'riscv64', 'uefi-loongarch64': 'loongarch64'}
+EFI_ARCH = {'uefi-ia32': 'ia32', 'uefi-x86-64': 'x86_64'}
 
 
 def probe(t):
@@ -13,19 +12,19 @@ def probe(t):
 
 
 def probe_then_limine(t, commands, config, files=None, **machine):
-    """Boot the EFI probe, which runs commands and then starts Limine with
+    """Boot the EFI probe, which runs commands and then starts Initium with
     config: firmware states QEMU does not give, made by the probe first."""
     tree = Tree()
     tree.add('/EFI/BOOT/' + t.port.efi_name, probe(t))
-    tree.add('/efiprobe.cmd', f'{commands} chain:\\EFI\\limine\\{t.port.efi_name}\n')
-    tree.add('/EFI/limine/' + t.port.efi_name, HostFile(t.env.bin(t.port.efi_name)))
-    tree.add('/EFI/limine/limine.conf', config)
+    tree.add('/efiprobe.cmd', f'{commands} chain:\\EFI\\initium\\{t.port.efi_name}\n')
+    tree.add('/EFI/initium/' + t.port.efi_name, HostFile(t.env.bin(t.port.efi_name)))
+    tree.add('/EFI/initium/initium.conf', config)
     for path, data in (files or {}).items():
         tree.add(path, data)
     return t.boot(t.boot_disk(tree), **machine)
 
 
-def boot_config(t, config, files=None, efi_path=None, conf_path='/boot/limine.conf', **machine):
+def boot_config(t, config, files=None, efi_path=None, conf_path='/boot/initium.conf', **machine):
     tree = Tree()
     for path, data in (files or {}).items():
         tree.add(path, data)
@@ -55,7 +54,7 @@ def efi_chainload(t):
     t.check(disk.parts[0].guid.lower() in device.lower(),
             f'device path {device} is the boot partition {disk.parts[0].guid}')
     parent = unescape(r['parent_file_path'])
-    t.check(parent.upper().endswith('\\EFI\\BOOT\\' + t.port.efi_name), f'parent image is Limine: {parent}')
+    t.check(parent.upper().endswith('\\EFI\\BOOT\\' + t.port.efi_name), f'parent image is Initium: {parent}')
 
 
 def shown_utf16(text, extra_units=()):
@@ -130,15 +129,15 @@ def efi_chainload_resolution(t):
 
 @check(ports=UEFI_PORTS, tags=['chainload'])
 def efi_chainload_return(t):
-    """When the image returns, Limine exits too, handing its status and exit
-    data to whatever started Limine (here, another probe)."""
+    """When the image returns, Initium exits too, handing its status and exit
+    data to whatever started Initium (here, another probe)."""
     limine_dir_conf = 'timeout: 0\n' + entry('Probe', protocol='efi', path='boot():/inner.efi',
                                              cmdline='name:inner exit:1234@returned_by_inner')
     tree = Tree()
     tree.add('/EFI/BOOT/' + t.port.efi_name, probe(t))
-    tree.add('/efiprobe.cmd', f'name:outer chain:\\EFI\\limine\\{t.port.efi_name}\n')
-    tree.add('/EFI/limine/' + t.port.efi_name, HostFile(t.env.bin(t.port.efi_name)))
-    tree.add('/EFI/limine/limine.conf', limine_dir_conf)
+    tree.add('/efiprobe.cmd', f'name:outer chain:\\EFI\\initium\\{t.port.efi_name}\n')
+    tree.add('/EFI/initium/' + t.port.efi_name, HostFile(t.env.bin(t.port.efi_name)))
+    tree.add('/EFI/initium/initium.conf', limine_dir_conf)
     tree.add('/inner.efi', probe(t))
     disk = t.boot_disk(tree)
     m = t.boot(disk)
@@ -148,8 +147,8 @@ def efi_chainload_return(t):
     text = m.stream(ch).text()
     from harness.report import Report
     outer = Report(text[text.rfind('K chain.status='):], begin='K chain.status=')
-    t.expect_eq(outer['chain.status'], '1234', 'status passed through Limine')
-    t.expect_eq(outer['chain.exit_data'], 'returned by inner', 'exit data passed through Limine')
+    t.expect_eq(outer['chain.status'], '1234', 'status passed through Initium')
+    t.expect_eq(outer['chain.exit_data'], 'returned by inner', 'exit data passed through Initium')
 
 
 @check(ports=UEFI_PORTS, tags=['chainload'])
@@ -183,7 +182,7 @@ def bootrec(t, name):
 
 
 def bios_disks(t):
-    """Disk 1 boots Limine and has a second partition holding a boot record;
+    """Disk 1 boots Initium and has a second partition holding a boot record;
     disk 2 is MBR with its own MBR code, two primaries and a logical one;
     disk 3 is GPT with a plain partition and a freebsd-boot one."""
     d2 = Disk('mbr', 16, mbr_id=0x1234abcd, parts=[
@@ -233,7 +232,7 @@ def bootrec_report(t, m):
 
 def check_real_mode_entry(t, r, dl, si):
     """[spec] is the BIOS Boot Specification 1.01, 6.5.1; [intent] what
-    Limine's spinup() sets up, mirroring MBR code handing over to a VBR."""
+    Initium's spinup() sets up, mirroring MBR code handing over to a VBR."""
     t.expect_eq(f"{int(r['dx'], 16) & 0xff:02x}", dl, '[spec] DL is the drive')
     t.expect_eq((r['cs'], r['ip']), ('0000', '7c00'), '[spec] entered at 0000:7c00')
     t.expect_eq((r['ds'], r['es'], r['ss']), ('0000', '0000', '0000'), '[intent] segments zero')

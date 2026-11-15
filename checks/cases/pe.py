@@ -6,7 +6,7 @@ from harness.ports import ALL_PORTS
 from cases._common import boot_entry, boot_kernel, check_report_clean, entry, kernel_file, panics_in_turn, read
 
 # PE32+ executables for the Limine protocol, which PROTOCOL.md does not
-# mention, so [intent]: Limine's PE loader takes them where its ELF one takes
+# mention, so [intent]: Initium's PE loader takes them where its ELF one takes
 # ELF executables. The images are remade from the ELF check executables.
 
 HIGHER_HALF = 0xffffffff80000000
@@ -59,8 +59,7 @@ def section_data(prefix=b''):
 def hostile_images(arch):
     """(what, image, the panic expected) for each way of spoiling a small
     image, made so that it fails the check named and no other first."""
-    wrong_machine = {'x86_64': 'pe: Not an x86-64 PE file', 'aarch64': 'pe: Not an ARM64 PE file',
-                     'riscv64': 'pe: Not a RISC-V PE file', 'loongarch64': 'pe: Not a loongarch64 PE file'}[arch]
+    wrong_machine = 'pe: Not an x86-64 PE file'
     unknown = 'limine: Unknown kernel executable format'
     s = pe.synthetic(arch, section_data())
     size = len(s.data)
@@ -71,7 +70,7 @@ def hostile_images(arch):
         ('NT headers past the end', s.patched(e_lfanew=size), unknown),
         ('unknown machine', s.patched(Machine=0x1234), unknown),
         ('IA-32 machine', s.patched(Machine=0x14c), wrong_machine),
-        ('another 64-bit machine', s.patched(Machine=0xaa64 if arch == 'x86_64' else 0x8664), wrong_machine),
+        ('another 64-bit machine', s.patched(Machine=0xaa64), wrong_machine),
         ('PE32 optional header', s.patched(Magic=0x10b), 'pe: Not a valid PE32+ file'),
         ('short optional header', s.patched(SizeOfOptionalHeader=200), 'pe: SizeOfOptionalHeader too small'),
         ('section table past the end', s.patched(NumberOfSections=0xffff),

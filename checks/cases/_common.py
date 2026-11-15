@@ -25,8 +25,8 @@ def read(path):
 
 
 def limine_version(env):
-    out = subprocess.run([env.bin('limine'), '--version'], stdout=subprocess.PIPE).stdout.decode()
-    m = re.search(r'Limine (\S+)', out)
+    out = subprocess.run([env.bin('initium'), '--version'], stdout=subprocess.PIPE).stdout.decode()
+    m = re.search(r'Initium (\S+)', out)
     return m.group(1) if m else out.strip()
 
 
@@ -122,7 +122,7 @@ def screen_text(scr):
 
 
 PANIC_ENDINGS = ('Press a key to return to ', 'Press CTRL+ALT+DEL to reboot.', 'System halted.')
-# The size UEFI Limine's fallback terminal gives the firmware's console.
+# The size UEFI Initium's fallback terminal gives the firmware's console.
 FALLBACK_COLS = 80
 
 
@@ -150,7 +150,7 @@ def continues(row):
 
 def shown_panic(t, m, **decode):
     """(message, decoded screen) of the panic a screenshot shows, the message
-    None where it shows none. Before it has a terminal of its own, UEFI Limine
+    None where it shows none. Before it has a terminal of its own, UEFI Initium
     prints through the firmware's console."""
     scr = None
     try:

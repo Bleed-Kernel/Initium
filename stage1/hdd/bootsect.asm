@@ -55,7 +55,7 @@ start:
     mov esp, 0x7c00
     sti
 
-    ; Limine does not boot from floppies, so a floppy drive number means we
+    ; Initium does not boot from floppies, so a floppy drive number means we
     ; were not booted properly.
     cmp dl, 0x80
     jb err.0

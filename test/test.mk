@@ -23,19 +23,6 @@ ifeq ($(ARCH),x86)
 override LDFLAGS += \
     -m elf_x86_64
 endif
-ifeq ($(ARCH),aarch64)
-override LDFLAGS += \
-    -m aarch64elf \
-    --fix-cortex-a53-843419
-endif
-ifeq ($(ARCH),riscv64)
-override LDFLAGS += \
-    -m elf64lriscv
-endif
-ifeq ($(ARCH),loongarch64)
-override LDFLAGS += \
-    -m elf64loongarch
-endif
 
 override LDFLAGS_MB2 := \
     -m elf_i386 \
@@ -74,39 +61,6 @@ override CFLAGS += \
     -march=x86-64 \
     -mgeneral-regs-only \
     -mno-red-zone
-endif
-
-ifeq ($(ARCH),aarch64)
-override CFLAGS += \
-    -mcpu=generic \
-    -march=armv8-a+nofp+nosimd \
-    -mcmodel=small \
-    -mno-outline-atomics
-endif
-
-ifeq ($(ARCH),riscv64)
-override CFLAGS += \
-    -mabi=lp64 \
-    -march=rv64imac_zicsr_zifencei
-# Keep linker relaxation away from gp, which nothing sets up.
-override LDFLAGS += \
-    --no-relax-gp
-endif
-
-ifeq ($(ARCH),loongarch64)
-# Both compilers go through the GOT for external symbols by default, which only
-# dynamic linking needs.
-ifeq ($(CC_IS_CLANG),1)
-override CFLAGS += \
-    -fdirect-access-external-data
-else
-override CFLAGS += \
-    -mdirect-extern-access
-endif
-override CFLAGS += \
-    -mabi=lp64s \
-    -march=loongarch64 \
-    -msoft-float
 endif
 
 override CFLAGS_MB := \

@@ -436,7 +436,7 @@ noreturn void chainload(char *config, char *cmdline) {
     }
 
     // The firmware's LoadImage will verify the Secure Boot signature of the
-    // chainloaded EFI application, so Limine does not need to enforce its
+    // chainloaded EFI application, so Initium does not need to enforce its
     // own hash check here.
     bool saved_secure_boot_active = secure_boot_active;
     secure_boot_active = false;

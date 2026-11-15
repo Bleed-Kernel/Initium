@@ -9,20 +9,20 @@ import subprocess
 from harness.env import which
 from harness.ports import PORTS
 
-# Code compiled into Limine that the project takes from elsewhere; reported,
-# but apart from Limine's own.
+# Code compiled into Initium that the project takes from elsewhere; reported,
+# but apart from Initium's own.
 VENDORED = ('flanterm/', 'libfdt/', 'picoefi/', 'common/lib/stb_image.h', 'common/compress/pdgzip',
             'common/freestanding-lgrt', 'freestanding-c-hdrs/')
 COVERAGE_FILE = 'coverage.bin'
-# QEMU's log of each block of guest code it translates: what Limine ran,
+# QEMU's log of each block of guest code it translates: what Initium ran,
 # found by matching the instructions' encodings against its image.
 TCG_LOG = 'tcg.log'
 _X86_INSN = re.compile(rb'^0x([0-9a-f]+):  ((?:[0-9a-f]{2} )+)')
 _WORD_INSN = re.compile(rb'^0x([0-9a-f]+):  ([0-9a-f]{8}|[0-9a-f]{4}) ')
 MAX_BASES = 8
 MAX_COPIES = 64
-# Code Limine runs from copies it makes: the SMP trampolines, the 32-bit
-# handoff code UEFI x86-64 Limine moves below 4GiB, and the FreeBSD hand-off,
+# Code Initium runs from copies it makes: the SMP trampolines, the 32-bit
+# handoff code UEFI x86-64 Initium moves below 4GiB, and the FreeBSD hand-off,
 # which moves itself out of the way of the blob it starts.
 COPIED_SOURCES = ('smp_trampoline.', 'spinup.', 'spinup_freebsd.', 'limine_32.', 'linux_32.', 'multiboot_32.')
 
@@ -73,19 +73,19 @@ class Coverage:
     def host_profile_pattern(self):
         """LLVM_PROFILE_FILE for the host tool's runs: merged as they exit into
         a pool of four files, so concurrent runs add up."""
-        return os.path.join(self.host_profiles, 'limine-%4m.profraw')
+        return os.path.join(self.host_profiles, 'initium-%4m.profraw')
 
     def _build_host_tool(self):
         # The build's copy, with the version filled in, beside the header of
         # the BIOS stages it embeds, and with the build's defines.
-        src = self.env.bin('limine.c')
-        built = os.path.join(self.env.bindir, 'limine')
-        out = self.env.payload('tools', 'limine-cov')
-        deps = [d for d in (src, built, self.env.bin('limine-bios-hdd.h')) if os.path.exists(d)]
+        src = self.env.bin('initium.c')
+        built = os.path.join(self.env.bindir, 'initium')
+        out = self.env.payload('tools', 'initium-cov')
+        deps = [d for d in (src, built, self.env.bin('initium-bios-hdd.h')) if os.path.exists(d)]
         if os.path.exists(out) and all(os.path.getmtime(out) >= os.path.getmtime(d) for d in deps):
             return out
         os.makedirs(os.path.dirname(out), exist_ok=True)
-        defines = [] if os.path.exists(self.env.bin('limine-bios-hdd.h')) else ['-DLIMINE_NO_BIOS']
+        defines = [] if os.path.exists(self.env.bin('initium-bios-hdd.h')) else ['-DLIMINE_NO_BIOS']
         res = subprocess.run([built, '--print-datadir'], stdout=subprocess.PIPE, stderr=subprocess.DEVNULL)
         if res.returncode == 0:
             defines.append(f'-DLIMINE_DATADIR="{res.stdout.decode().strip()}"')
@@ -99,14 +99,14 @@ class Coverage:
                     if f.endswith('.profraw')]
         if not profiles:
             return None
-        data = os.path.join(self.host_profiles, 'limine.profdata')
+        data = os.path.join(self.host_profiles, 'initium.profdata')
         subprocess.run([which('llvm-profdata'), 'merge', '-sparse', '-o', data, *profiles], check=True)
         out = subprocess.run([which('llvm-cov'), 'export', '-format=lcov', f'-instr-profile={data}',
                               self.host_tool], stdout=subprocess.PIPE, check=True).stdout.decode()
         lines, ours = {}, False
         for rec in out.split('\n'):
             if rec.startswith('SF:'):
-                ours = os.path.basename(rec[3:]) == 'limine.c'
+                ours = os.path.basename(rec[3:]) == 'initium.c'
             elif rec.startswith('DA:') and ours:
                 n, count = rec[3:].split(',')[:2]
                 lines[int(n)] = int(count)
@@ -114,7 +114,7 @@ class Coverage:
 
     def _image(self, port):
         if port.name == 'bios':
-            return self.env.bin('limine-bios.sys'), 'base', 0xf000
+            return self.env.bin('initium-bios.sys'), 'base', 0xf000
         efi = self.env.bin(port.efi_name)
         return efi, 'entry', pe_entry(efi)
 
@@ -218,7 +218,7 @@ class Coverage:
 
     def _line_table(self, port_name):
         """(address, size, path, line, function) of each instruction of a
-        port's Limine, cached by the identity of its ELF."""
+        port's Initium, cached by the identity of its ELF."""
         elf = self.env.limine_elf(port_name)
         st = os.stat(elf)
         key = f'{st.st_mtime_ns}:{st.st_size}'
@@ -340,7 +340,7 @@ class Coverage:
             all_lines, hit_lines = {}, {}
             for i, (a, _, path, line, func) in enumerate(table):
                 all_lines.setdefault(path, set()).add(line)
-                # Assembler-local labels, such as RISC-V's .Lpcrel_hi*, are
+                # Assembler-local labels (.L*) are
                 # no functions.
                 if not func.startswith('.L'):
                     func_seen.setdefault((path, func), set()).add(port_name)
@@ -358,7 +358,7 @@ class Coverage:
                                   'percent': round(100.0 * hit / total, 2) if total else 0.0}
         host = self._host_lines()
         if host is not None:
-            path = os.path.join('host', 'limine.c')
+            path = os.path.join('host', 'initium.c')
             union_all[path] = set(host)
             union_hit[path] = {n for n, count in host.items() if count}
             total, hit = len(union_all[path]), len(union_hit[path])
@@ -401,4 +401,4 @@ class Coverage:
         if 'host' in summary:
             host_note = f', the host tool\'s {summary["host"]["covered"]}/{summary["host"]["lines"]} included'
         print(f'coverage: {summary["all"]["covered"]}/{summary["all"]["lines"]} lines '
-              f'({summary["all"]["percent"]}%) of Limine\'s own code{host_note}; report in {outdir}')
+              f'({summary["all"]["percent"]}%) of Initium\'s own code{host_note}; report in {outdir}')

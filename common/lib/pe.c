@@ -36,9 +36,6 @@ typedef struct _IMAGE_DOS_HEADER {
 
 #define IMAGE_FILE_MACHINE_I386 0x14c
 #define IMAGE_FILE_MACHINE_AMD64 0x8664
-#define IMAGE_FILE_MACHINE_ARM64 0xaa64
-#define IMAGE_FILE_MACHINE_RISCV64 0x5064
-#define IMAGE_FILE_MACHINE_LOONGARCH64 0x6264
 
 #define IMAGE_FILE_RELOCS_STRIPPED 1
 #define IMAGE_FILE_EXECUTABLE_IMAGE 2
@@ -197,25 +194,9 @@ static void pe64_validate(uint8_t *image, size_t file_size) {
         panic(true, "pe: SizeOfOptionalHeader too small");
     }
 
-#if defined(__x86_64__) || defined(__i386__)
     if (nt_hdrs->FileHeader.Machine != IMAGE_FILE_MACHINE_AMD64) {
         panic(true, "pe: Not an x86-64 PE file");
     }
-#elif defined(__aarch64__)
-    if (nt_hdrs->FileHeader.Machine != IMAGE_FILE_MACHINE_ARM64) {
-        panic(true, "pe: Not an ARM64 PE file");
-    }
-#elif defined(__riscv) && (__riscv_xlen == 64)
-    if (nt_hdrs->FileHeader.Machine != IMAGE_FILE_MACHINE_RISCV64) {
-        panic(true, "pe: Not a RISC-V PE file");
-    }
-#elif defined(__loongarch__) && (__loongarch_grlen == 64)
-    if (nt_hdrs->FileHeader.Machine != IMAGE_FILE_MACHINE_LOONGARCH64) {
-        panic(true, "pe: Not a loongarch64 PE file");
-    }
-#else
-#error Unknown architecture
-#endif
 }
 
 int pe_bits(uint8_t *image, size_t image_size) {
@@ -251,17 +232,13 @@ int pe_bits(uint8_t *image, size_t image_size) {
         case IMAGE_FILE_MACHINE_I386:
             return 32;
         case IMAGE_FILE_MACHINE_AMD64:
-        case IMAGE_FILE_MACHINE_ARM64:
-        case IMAGE_FILE_MACHINE_RISCV64:
-        case IMAGE_FILE_MACHINE_LOONGARCH64:
             return 64;
     }
 
     return -1;
 }
 
-// A relocation's target alignment is the image's to choose, and a wide
-// unaligned access may trap on riscv64 and loongarch64.
+// A relocation's target alignment is the image's to choose, so go a byte at a time.
 static uint64_t reloc_load(const void *p, size_t size) {
     const volatile uint8_t *s = p;
     uint64_t v = 0;

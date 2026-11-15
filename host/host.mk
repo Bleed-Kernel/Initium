@@ -9,11 +9,11 @@ LDFLAGS=
 LIBS=
 
 .PHONY: all
-all: limine
+all: initium
 
 .PHONY: clean
 clean:
-	rm -f limine limine.exe
+	rm -f initium initium.exe
 
-limine: limine.c
-	$(CC) $(CFLAGS) -std=c99 -D_FILE_OFFSET_BITS=64 $(CPPFLAGS) $(LDFLAGS) limine.c $(LIBS) -o $@
+initium: initium.c
+	$(CC) $(CFLAGS) -std=c99 -D_FILE_OFFSET_BITS=64 $(CPPFLAGS) $(LDFLAGS) initium.c $(LIBS) -o $@

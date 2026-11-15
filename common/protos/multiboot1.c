@@ -1,4 +1,3 @@
-#if defined(__x86_64__) || defined(__i386__)
 
 #include <stdint.h>
 #include <stddef.h>
@@ -26,7 +25,7 @@
 #include <mm/pmm.h>
 #include <drivers/vga_textmode.h>
 
-#define LIMINE_BRAND "Limine " LIMINE_VERSION
+#define INITIUM_BRAND "Initium " INITIUM_VERSION
 
 #define MEMMAP_MAX 256
 
@@ -39,7 +38,7 @@ static size_t get_multiboot1_info_size(
 #define OVERFLOW panic(true, "multiboot1: info size overflow")
     return ALIGN_UP(sizeof(struct multiboot1_info), 16, OVERFLOW) +
            ALIGN_UP(strlen(cmdline) + 1, 16, OVERFLOW) +
-           ALIGN_UP(sizeof(LIMINE_BRAND), 16, OVERFLOW) +
+           ALIGN_UP(sizeof(INITIUM_BRAND), 16, OVERFLOW) +
            ALIGN_UP(CHECKED_MUL(section_entry_size, section_num, OVERFLOW), 16, OVERFLOW) +
            ALIGN_UP(CHECKED_MUL(sizeof(struct multiboot1_module), modules_count, OVERFLOW), 16, OVERFLOW) +
            ALIGN_UP(modules_cmdlines_size, 16, OVERFLOW) +
@@ -469,7 +468,7 @@ noreturn void multiboot1_load(char *config, char *cmdline) {
     multiboot1_info->cmdline = (uint32_t)(size_t)lowmem_cmdline - mb1_info_slide;
     multiboot1_info->flags |= (1 << 2);
 
-    char *bootload_name = LIMINE_BRAND;
+    char *bootload_name = INITIUM_BRAND;
     char *lowmem_bootname = mb1_info_alloc(&mb1_info_raw, strlen(bootload_name) + 1);
     strcpy(lowmem_bootname, bootload_name);
 
@@ -632,4 +631,3 @@ skip_modeset:;
                   (uint32_t)(uintptr_t)ranges, (uint32_t)ranges_count);
 }
 
-#endif

@@ -104,8 +104,8 @@ dap:
     dw 0x7c00, 0
     dq 0
 
-s_off: db "A20 off before Limine", 10, 0
-s_on: db "A20 on before Limine", 10, 0
+s_off: db "A20 off before Initium", 10, 0
+s_on: db "A20 on before Initium", 10, 0
 s_fail: db "A20 boot record: disk read failed", 10, 0
 
 times 440-($-$$) db 0

@@ -18,9 +18,6 @@ static struct efi_boot_services *bs;
 static struct efi_runtime_services *rt;
 static efi_handle self;
 static struct efi_loaded_image_protocol *loaded;
-#if !defined(__x86_64__) && !defined(__i386__)
-static struct efi_serial_io_protocol *serial;
-#endif
 
 static size_t slen(const char *s) {
     size_t n = 0;
@@ -40,18 +37,7 @@ static bool sprefix(const char *s, const char *p) {
 }
 
 static void putch(char c) {
-#if defined(__x86_64__) || defined(__i386__)
     asm volatile ("outb %0, $0xe9" :: "a"(c));
-#else
-    // ConOut's terminal can drop what runs past its last column, so the
-    // report goes to the serial port itself.
-    if (serial != NULL) {
-        char crlf[2] = { '\r', c };
-        size_t size = c == '\n' ? 2 : 1;
-        serial->write(serial, &size, c == '\n' ? crlf : crlf + 1);
-        return;
-    }
-#endif
     uint16_t buf[3] = { (uint16_t)(uint8_t)c, 0, 0 };
     if (c == '\n') {
         buf[0] = '\r';
@@ -756,7 +742,7 @@ static uint64_t fnv1a(const uint8_t *p, uint64_t len) {
     return h;
 }
 
-// A CC measurement protocol over no hardware, as Limine finds on Intel TDX
+// A CC measurement protocol over no hardware, as Initium finds on Intel TDX
 // and AMD SEV: it maps PCRs to MRs as TDX does (PCR 0 to the MRTD, 1 and 7 to
 // RTMR[0], 2 to 6 to RTMR[1], 8 to 15 to RTMR[2]), and reports each call.
 // Flags: 1 has MapPcrToMrIndex() fail, 2 HashLogExtendEvent(), 4
@@ -1130,7 +1116,6 @@ static void cmd_fakedisk(char *arg) {
     out("K fakedisk=%x\n", (uint64_t)s);
 }
 
-#if defined(__x86_64__) || defined(__i386__)
 static const uint8_t *acpi_table(const char *sig) {
     struct efi_guid acpi20 = { 0x8868e871, 0xe4f1, 0x11d3, { 0xbc, 0x22, 0x00, 0x80, 0xc7, 0x3c, 0x88, 0x81 } };
     const uint8_t *rsdp = NULL;
@@ -1364,44 +1349,7 @@ static void cmd_deadiommu(char *arg) {
     acpi_checksum(table);
     out("K deadiommu=%x\n", base);
 }
-#endif
 
-#if !defined(__x86_64__) && !defined(__i386__)
-// SetVirtualAddressMap() replaced by code that returns EFI_UNSUPPORTED, in
-// runtime services memory so that it outlives boot services.
-static void cmd_svamfail(void) {
-#if defined(__aarch64__)
-    static const uint32_t code[] = { 0xd2800060, 0xf2f00000, 0xd65f03c0 };
-#elif defined(__riscv)
-    static const uint32_t code[] = { 0xfff00513, 0x03f51513, 0x00350513, 0x00008067 };
-#elif defined(__loongarch64)
-    static const uint32_t code[] = { 0x03200004, 0x03800c84, 0x4c000020 };
-#endif
-    efi_physical_address page = 0;
-    efi_status s = bs->allocate_pages(EFI_ALLOCATE_ANY_PAGES, EFI_RUNTIME_SERVICES_CODE, 1, &page);
-    if (s != EFI_SUCCESS) {
-        out("K svamfail=%x\n", (uint64_t)s);
-        return;
-    }
-    uint32_t *dst = (uint32_t *)(uintptr_t)page;
-    for (size_t i = 0; i < sizeof(code) / sizeof(code[0]); i++) {
-        dst[i] = code[i];
-    }
-#if defined(__aarch64__)
-    asm volatile ("dc cvau, %0\n\tdsb ish\n\tic ivau, %0\n\tdsb ish\n\tisb" :: "r"(dst) : "memory");
-#elif defined(__riscv)
-    asm volatile ("fence.i" ::: "memory");
-#elif defined(__loongarch64)
-    asm volatile ("ibar 0" ::: "memory");
-#endif
-    rt->set_virtual_address_map = (efi_set_virtual_address_map)(uintptr_t)dst;
-    rt->hdr.crc32 = 0;
-    uint32_t crc = 0;
-    bs->calculate_crc32(rt, rt->hdr.header_size, &crc);
-    rt->hdr.crc32 = crc;
-    out("K svamfail=0\n");
-}
-#endif
 
 static efi_status EFI_API failing_watchdog(size_t timeout, uint64_t code, size_t size,
                                            uint16_t *data) {
@@ -1569,14 +1517,6 @@ static void cmd_smbios3(char *arg) {
     out("K smbios3=%x\n", (uint64_t)bs->install_configuration_table(&g, ep));
 }
 
-#if defined(__riscv)
-// Translation off, as some RISC-V firmware runs: the firmware's identity map
-// leaves every address the same without it.
-static void cmd_satpoff(void) {
-    asm volatile ("csrw satp, zero\n\tsfence.vma" ::: "memory");
-    out("K satpoff=0\n");
-}
-#endif
 
 static char cmdbuf[4096];
 
@@ -1609,12 +1549,6 @@ efi_status efi_main(efi_handle image, struct efi_system_table *system_table) {
     self = image;
     struct efi_guid lig = EFI_LOADED_IMAGE_PROTOCOL_GUID;
     bs->handle_protocol(image, &lig, (void **)&loaded);
-#if !defined(__x86_64__) && !defined(__i386__)
-    struct efi_guid sg = EFI_SERIAL_IO_PROTOCOL_GUID;
-    if (bs->locate_protocol(&sg, NULL, (void **)&serial) != EFI_SUCCESS) {
-        serial = NULL;
-    }
-#endif
 
     size_t n = 0;
     if (loaded->load_options != NULL && loaded->load_options_size >= 2) {
@@ -1692,11 +1626,6 @@ efi_status efi_main(efi_handle image, struct efi_system_table *system_table) {
             cmd_faketcg2(tok + 9);
         } else if (sprefix(tok, "fakedisk:")) {
             cmd_fakedisk(tok + 9);
-#if defined(__riscv)
-        } else if (sprefix(tok, "satpoff")) {
-            cmd_satpoff();
-#endif
-#if defined(__x86_64__) || defined(__i386__)
         } else if (sprefix(tok, "msr:")) {
             cmd_msr(tok + 4);
         } else if (sprefix(tok, "vtdon")) {
@@ -1709,10 +1638,6 @@ efi_status efi_main(efi_handle image, struct efi_system_table *system_table) {
             cmd_fakeiommu(tok + 10);
         } else if (sprefix(tok, "deadiommu:")) {
             cmd_deadiommu(tok + 10);
-#else
-        } else if (sprefix(tok, "svamfail")) {
-            cmd_svamfail();
-#endif
         } else if (sprefix(tok, "chain:")) {
             cmd_chain(tok + 6);
         } else if (sprefix(tok, "stall:")) {
