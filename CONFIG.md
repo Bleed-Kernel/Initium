@@ -53,8 +53,8 @@ the end of the file, will be part of that *menu entry*.
 A *menu entry* can be a directory, meaning it can hold sub-entries. In order
 for an entry to become a directory, it needs to have a sub-entry following
 right after it.
-(A `comment` option may be present between the beginning of the directory entry
-and the beginning of the sub-entry).
+(A `comment` or `icons` option may be present between the beginning of the
+directory entry and the beginning of the sub-entry).
 
 A *sub-entry* is a menu entry started with a number of `/` greater than 1
 prepended to it.
@@ -189,6 +189,11 @@ Initium interface control options:
   It can be any of the following values: `0`, `90`, `180`, `270`. Default is
   `0`, but on a panel Initium knows to be mounted turned in its casing it is the
   turn that shows the interface upright.
+* `interface_style` - `icons` (the default) shows the menu as a row of
+  entry icons over the wallpaper; directories open as their own row, Escape goes
+  back. On UEFI, Firmware Setup and UEFI Shell tiles are added at the end of
+  the top row when they are available. `classic` shows the text menu instead. The text menu is always used on
+  serial, in text mode, or with an `interface_rotation` other than `0`.
 * `interface_branding` - A string that will be displayed on top of the Initium
   interface.
 * `interface_branding_colour` - An `RRGGBB` hexadecimal value specifying the
@@ -268,6 +273,14 @@ Editor control options:
 
 * `comment` - An optional comment string that will be displayed by the
   bootloader on the menu when an entry is selected.
+* `icons` - The icon the icon menu shows for the entry. Either a built-in name
+  such as `bleed-kernel`, loaded from `icons/<name>.png` next to the config file
+  (see `icons/README.md` for the set), or a path such as
+  `boot():/images/os.png` to a PNG, JPEG or BMP. Images keep their alpha and are
+  scaled to fit a square (96 pixels, more at high resolutions). Entries without
+  one show `generic`, directories `folder`. With Secure Boot active the image
+  needs a hash, as with `wallpaper`, so built-in names are not shown. `icon` is
+  accepted as an alias.
 * `protocol` - The boot protocol that will be used to boot the
   kernel/executable. Valid protocols are: `linux`, `limine`, `multiboot`
   (or `multiboot1`), `multiboot2`, `efi`, `efi_boot_entry` and `bios`.

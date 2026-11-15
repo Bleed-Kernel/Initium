@@ -227,6 +227,8 @@ install: all
 	$(INSTALL_DATA) '$(call SHESCAPE,$(BUILDDIR))/man/man1/initium.1' '$(call SHESCAPE,$(DESTDIR)$(mandir))/man1/'
 	$(INSTALL) -d '$(call SHESCAPE,$(DESTDIR)$(datarootdir))'
 	$(INSTALL) -d '$(call SHESCAPE,$(DESTDIR)$(datarootdir))/initium'
+	$(INSTALL) -d '$(call SHESCAPE,$(DESTDIR)$(datarootdir))/initium/icons'
+	for f in '$(call SHESCAPE,$(SRCDIR))'/icons/*.png; do [ -f "$$f" ] && $(INSTALL_DATA) "$$f" '$(call SHESCAPE,$(DESTDIR)$(datarootdir))/initium/icons/' || true; done
 ifeq ($(BUILD_BIOS),initium-bios)
 	$(INSTALL_DATA) '$(call SHESCAPE,$(BINDIR))/initium-bios.sys' '$(call SHESCAPE,$(DESTDIR)$(datarootdir))/initium/'
 endif
@@ -262,6 +264,7 @@ uninstall:
 	-rmdir '$(call SHESCAPE,$(DESTDIR)$(docdir))'
 	rm -f '$(call SHESCAPE,$(DESTDIR)$(mandir))/man1/initium.1'
 	rm -f '$(call SHESCAPE,$(DESTDIR)$(bindir))/initium'
+	rm -rf '$(call SHESCAPE,$(DESTDIR)$(datarootdir))/initium/icons'
 	rm -f '$(call SHESCAPE,$(DESTDIR)$(datarootdir))/initium/initium-bios.sys'
 	rm -f '$(call SHESCAPE,$(DESTDIR)$(datarootdir))/initium/initium-bios-cd.bin'
 	rm -f '$(call SHESCAPE,$(DESTDIR)$(datarootdir))/initium/initium-uefi-cd.bin'

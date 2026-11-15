@@ -19,6 +19,9 @@ char *config_entry_editor(const char *title, const char *orig_entry);
 
 extern bool booting_from_editor;
 
+struct menu_entry;
+bool should_skip_entry(struct menu_entry *entry);
+
 #define KEYBOARD_LAYOUT_UNKNOWN (-1)
 #define KEYBOARD_LAYOUT_QWERTY 0
 #define KEYBOARD_LAYOUT_DVORAK 1

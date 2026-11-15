@@ -23,7 +23,7 @@ start:
     ; Source: https://github.com/freebsd/freebsd-src/blob/82a21151cf1d7a3e9e95b9edbbf74ac10f386d6a/stand/i386/boot2/boot1.S
   .bpb:
     times 3-($-$$) db 0
-    .bpb_oem_id:            db "LIMINE  "
+    .bpb_oem_id:            db "INITIUM "
     .bpb_sector_size:       dw 512
     .bpb_sects_per_cluster: db 0
     .bpb_reserved_sects:    dw 0
@@ -40,7 +40,7 @@ start:
     .bpb_reserved:          db 0
     .bpb_signature:         db 0
     .bpb_volume_id:         dd 0
-    .bpb_volume_label:      db "LIMINE     "
+    .bpb_volume_label:      db "INITIUM    "
     .bpb_filesystem_type:   times 8 db 0
 
   .skip_bpb:

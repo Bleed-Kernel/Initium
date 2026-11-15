@@ -13,6 +13,9 @@ bool gterm_init(struct fb_info **ret, size_t *_fbs_count,
 // set, else the turn that what is drawn on fb needs to look upright.
 int gterm_get_rotation(char *config, struct fb_info *fb);
 
+// The wallpaper as 0xRRGGBB pixels the size of terms[0]
+extern uint32_t *gterm_backdrop;
+
 struct flanterm_params {
     uint32_t *canvas;
     size_t canvas_size;

@@ -293,6 +293,9 @@ static uint32_t default_bg_bright, default_fg_bright;
 static size_t bg_canvas_size;
 static uint32_t *bg_canvas;
 
+uint32_t *gterm_backdrop;
+static size_t gterm_backdrop_size;
+
 #define A(rgb) (uint8_t)(rgb >> 24)
 #define R(rgb) (uint8_t)(rgb >> 16)
 #define G(rgb) (uint8_t)(rgb >> 8)
@@ -855,6 +858,11 @@ bool gterm_init(struct fb_info **_fbs, size_t *_fbs_count,
     struct gterm_config cfg;
     gterm_parse_config(config, &cfg);
 
+    if (gterm_backdrop != NULL) {
+        pmm_free(gterm_backdrop, gterm_backdrop_size);
+        gterm_backdrop = NULL;
+    }
+
     terms_i = 0;
     terms = ext_mem_alloc_counted(fbs_count, sizeof(void *));
 
@@ -871,6 +879,15 @@ bool gterm_init(struct fb_info **_fbs, size_t *_fbs_count,
         size_t font_scale_x, font_scale_y;
         int rotation = gterm_get_rotation(config, fb);
         gterm_fb_setup(fb, config, &cfg, rotation, &font_scale_x, &font_scale_y);
+
+        if (terms_i == 0 && gterm_backdrop == NULL && bg_canvas != NULL && rotation == FLANTERM_FB_ROTATE_0) {
+            uint32_t *canvas = bg_canvas;
+            bg_canvas = ext_mem_alloc(bg_canvas_size);
+            loop_external(fb, 0, fb->framebuffer_width, 0, fb->framebuffer_height);
+            gterm_backdrop = bg_canvas;
+            gterm_backdrop_size = bg_canvas_size;
+            bg_canvas = canvas;
+        }
 
         terms[terms_i] = flanterm_fb_init(ext_mem_alloc_size_t,
                             pmm_free_size_t,
@@ -889,6 +906,9 @@ bool gterm_init(struct fb_info **_fbs, size_t *_fbs_count,
 
         if (terms[terms_i] != NULL) {
             terms_i++;
+        } else if (terms_i == 0 && gterm_backdrop != NULL) {
+            pmm_free(gterm_backdrop, gterm_backdrop_size);
+            gterm_backdrop = NULL;
         }
 
         if (bg_canvas != NULL) {

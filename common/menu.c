@@ -4,6 +4,7 @@
 #include <stdnoreturn.h>
 #include <config.h>
 #include <menu.h>
+#include <gmenu.h>
 #include <lib/bli.h>
 #include <lib/print.h>
 #include <lib/misc.h>
@@ -379,6 +380,8 @@ static size_t get_prev_line(size_t index, const char *buffer) {
 
 static const char *VALID_KEYS[] = {
     "COMMENT",
+    "ICONS",
+    "ICON",
     "PROTOCOL",
     "CMDLINE",
     "PATH",
@@ -932,7 +935,7 @@ static bool arch_in_list(const char *list, const char *arch) {
     return false;
 }
 
-static inline bool should_skip_entry(struct menu_entry *entry) {
+bool should_skip_entry(struct menu_entry *entry) {
     if (entry->skipped_computed) {
         return entry->skipped;
     }
@@ -1844,6 +1847,7 @@ noreturn void _menu(bool first_run) {
     format_fg_rgb_escape(interface_help_colour_bright, help_bright_rgb);
 
     bool custom_branding = false;
+    uint32_t branding_rgb = 0x00aaaa;
     {
         char *tmp = config_get_value(NULL, 0, "INTERFACE_BRANDING");
         if (tmp != NULL) {
@@ -1899,6 +1903,7 @@ noreturn void _menu(bool first_run) {
             uint32_t rgb;
             if (parse_rgb_colour_value(tmp, &rgb)) {
                 format_fg_rgb_escape(menu_branding_colour, rgb);
+                branding_rgb = rgb;
             }
         }
     }
@@ -2100,6 +2105,40 @@ noreturn void _menu(bool first_run) {
 
 refresh:
     mouse_erase_pointer();
+
+    if (gmenu_usable()) {
+        if (booting_from_editor) {
+            if (booting_from_blank) {
+                goto editor_blank;
+            }
+            goto editor;
+        }
+        struct gmenu_opts gopts = {
+            .branding = menu_branding,
+            .branding_rgb = branding_rgb,
+            .help_rgb = help_rgb,
+            .config_ready = config_ready,
+            .editor = editor_enabled,
+#if defined(UEFI)
+            .firmware = reboot_to_firmware_supported,
+            .shell = uefi_shell_supported,
+#endif
+        };
+        switch (gmenu_run(&selected_menu_entry, &timeout_ms, &skip_timeout, &gopts)) {
+            case 'e':
+                goto editor;
+            case 'b':
+                goto editor_blank;
+#if defined(UEFI)
+            case 's':
+                reboot_to_fw_ui();
+            case 'u':
+                boot_uefi_shell();
+#endif
+            default:
+                goto autoboot;
+        }
+    }
 
     if (selected_entry >= tree_offset + terms[0]->rows - 8 - header_offset) {
         tree_offset = selected_entry - (terms[0]->rows - 9 - header_offset);

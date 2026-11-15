@@ -7,6 +7,7 @@
 
 extern bool config_ready;
 extern bool bad_config;
+extern char config_dir[256];
 
 struct menu_entry {
     char *name;
@@ -19,6 +20,8 @@ struct menu_entry {
     bool skipped;
     bool dup_index_computed;
     size_t dup_index;
+    bool icon_tried;
+    struct gmenu_icon *icon;
 };
 
 struct conf_tuple {

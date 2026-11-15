@@ -140,6 +140,8 @@ found:
 }
 #endif
 
+char config_dir[256] = "/boot/initium";
+
 int init_config_disk(struct volume *part) {
 #if defined(UEFI)
     bool use_default_efi_search_path = false;
@@ -157,18 +159,19 @@ int init_config_disk(struct volume *part) {
 #endif
 
     struct file_handle *f;
+    const char *found = NULL;
 
     bool old_cif = case_insensitive_fopen;
     case_insensitive_fopen = true;
     if (
      false
 #if defined(UEFI)
-     || (f = fopen(part, use_default_efi_search_path ? "/EFI/BOOT/initium.conf" : efi_app_path)) != NULL
+     || (f = fopen(part, found = use_default_efi_search_path ? "/EFI/BOOT/initium.conf" : efi_app_path)) != NULL
 #endif
-     || (f = fopen(part, "/boot/initium/initium.conf")) != NULL
-     || (f = fopen(part, "/boot/initium.conf")) != NULL
-     || (f = fopen(part, "/initium/initium.conf")) != NULL
-     || (f = fopen(part, "/initium.conf")) != NULL
+     || (f = fopen(part, found = "/boot/initium/initium.conf")) != NULL
+     || (f = fopen(part, found = "/boot/initium.conf")) != NULL
+     || (f = fopen(part, found = "/initium/initium.conf")) != NULL
+     || (f = fopen(part, found = "/initium.conf")) != NULL
     ) {
         goto opened;
     }
@@ -178,6 +181,16 @@ int init_config_disk(struct volume *part) {
 
 opened:
     case_insensitive_fopen = old_cif;
+
+    {
+        size_t dir_len = strlen(found);
+        while (dir_len > 0 && found[dir_len - 1] != '/') dir_len--;
+        if (dir_len > 0) dir_len--;
+        if (dir_len < sizeof(config_dir)) {
+            memcpy(config_dir, found, dir_len);
+            config_dir[dir_len] = 0;
+        }
+    }
 
     if (f->size > SIZE_MAX - 2) {
         panic(false, "Config file too large");
