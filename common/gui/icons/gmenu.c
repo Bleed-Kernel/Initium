@@ -801,6 +801,7 @@ int gmenu_run(struct menu_entry **selected, uint64_t *timeout_ms, bool *skip_tim
             build_level(&lv, from->parent);
             sel = level_index(&lv, from);
             anim_level(&lv, sel);
+            an.row = an.label = 256;
         } else if (e == &fw_tile) {
             return leave(&lv, activate, 's');
         } else if (e == &shell_tile) {
@@ -809,6 +810,7 @@ int gmenu_run(struct menu_entry **selected, uint64_t *timeout_ms, bool *skip_tim
             build_level(&lv, e);
             sel = level_index(&lv, NULL);
             anim_level(&lv, sel);
+            an.row = an.label = 256;
         } else {
             sel = activate;
             *selected = e;
