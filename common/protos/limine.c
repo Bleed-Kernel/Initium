@@ -709,7 +709,7 @@ noreturn void limine_load(char *config, char *cmdline) {
 
     // Check if 64 bit CPU
     if (!cpuid(0x80000001, 0, &eax, &ebx, &ecx, &edx) || !(edx & (1 << 29))) {
-        panic(true, "limine: This CPU does not support 64-bit mode.");
+        panic(true, "limine: This CPU does not support 64-bit mode. If you are using a virtual machine please ensure it is set to a 64-bit option.");
     }
 
     uint64_t hhdm_span_top = get_hhdm_span_top(base_revision);

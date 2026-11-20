@@ -143,7 +143,9 @@ Miscellaneous:
   Defaults to not verbose.
 * `terse` - If set to `yes`, suppress informational loading messages (such as
   "Loading kernel" and "Loading module") when booting any entry. The menu and
-  any error or panic messages remain unaffected. Defaults to `no`.
+  any error or panic messages remain unaffected. Defaults to `no`. With it on,
+  the icon menu fades to black when an entry boots and the screen stays black
+  until the kernel draws; with it off the menu goes straight to the messages.
 * `randomise_memory` - If set to `yes`, randomise the contents of RAM at bootup
   in order to find bugs related to non zeroed memory or for security reasons.
   This option will slow down boot time significantly. In the case of IA-32,
@@ -189,10 +191,12 @@ Initium interface control options:
   It can be any of the following values: `0`, `90`, `180`, `270`. Default is
   `0`, but on a panel Initium knows to be mounted turned in its casing it is the
   turn that shows the interface upright.
-* `interface_style` - `icons` (the default) shows the menu as a row of
-  entry icons over the wallpaper; directories open as their own row, Escape goes
-  back. On UEFI, Firmware Setup and UEFI Shell tiles are added at the end of
-  the top row when they are available. `classic` shows the text menu instead. The text menu is always used on
+* `gui` - `icons` (the default) shows the menu as a row of entry icons over
+  the wallpaper; directories open as their own row, Escape goes back. On UEFI,
+  Firmware Setup and UEFI Shell tiles are added at the end of the top row when
+  they are available. `text-centre` shows the text menu in the middle of the
+  screen; `text-left` and `text-right` centre it in the left or right third.
+  The text menu (centred, unless `text-left` or `text-right`) is always used on
   serial, in text mode, or with an `interface_rotation` other than `0`.
 * `interface_branding` - A string that will be displayed on top of the Initium
   interface.

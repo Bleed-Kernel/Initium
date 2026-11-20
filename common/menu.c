@@ -4,7 +4,7 @@
 #include <stdnoreturn.h>
 #include <config.h>
 #include <menu.h>
-#include <gmenu.h>
+#include <gui/icons/gmenu.h>
 #include <lib/bli.h>
 #include <lib/print.h>
 #include <lib/misc.h>
@@ -51,6 +51,20 @@ static char menu_branding_colour[24] = "\e[38;2;0;170;170m";
 static char *menu_branding = NULL;
 
 int current_keyboard_layout = KEYBOARD_LAYOUT_UNKNOWN;
+
+static size_t menu_x(size_t width) {
+    int64_t cols = terms[0]->cols, region = cols, start = 0;
+    char *gui = config_get_value(NULL, 0, "GUI");
+    if (gui != NULL && strcmp(gui, "text-left") == 0) {
+        region = cols / 3;
+    } else if (gui != NULL && strcmp(gui, "text-right") == 0) {
+        region = cols / 3;
+        start = cols - region;
+    }
+    int64_t x = start + (region - (int64_t)width) / 2;
+    if (x > cols - (int64_t)width) x = cols - (int64_t)width;
+    return x < 0 ? 0 : (size_t)x;
+}
 
 static void keyboard_layout_init(void) {
     char *layout = config_get_value(NULL, 0, "keyboard_layout");
@@ -228,7 +242,7 @@ static void print_secondary_help(size_t row, bool firmware_setup, bool uefi_shel
         }
     }
 
-    set_cursor_pos_helper((terms[0]->cols > len) ? (terms[0]->cols - len) / 2 : 0, row);
+    set_cursor_pos_helper(menu_x(len), row);
 
     bool need_separator = false;
     if (firmware_setup) {
@@ -295,7 +309,7 @@ static void print_branding(void) {
     size_t keep;
     size_t width = display_width(menu_branding, max_width > 3 ? max_width - 3 : 0, &keep);
     if (width <= max_width) {
-        set_cursor_pos_helper((terms[0]->cols - width) / 2, y);
+        set_cursor_pos_helper(menu_x(width), y);
         print("%s%s\e[0m", menu_branding_colour, menu_branding);
     } else {
         set_cursor_pos_helper(1, y);
@@ -1663,7 +1677,7 @@ static void print_entry_comment(const struct menu_entry *entry, size_t row) {
     size_t width = display_width(comment, max_width > 3 ? max_width - 3 : 0, &keep);
     FOR_TERM(TERM->scroll_enabled = false);
     if (width <= max_width) {
-        set_cursor_pos_helper((terms[0]->cols - width) / 2, row);
+        set_cursor_pos_helper(menu_x(width), row);
         print("\e[36m%s\e[0m", comment);
     } else {
         set_cursor_pos_helper(1, row);
@@ -2165,7 +2179,7 @@ refresh:
         } else {
             msg = "[config file not found]";
         }
-        set_cursor_pos_helper((terms[0]->cols - strlen(msg)) / 2, (terms[0]->rows - 1) / 2);
+        set_cursor_pos_helper(menu_x(strlen(msg)), (terms[0]->rows - 1) / 2);
         print("%s\n", msg);
     }
 
@@ -2174,7 +2188,8 @@ refresh:
                              &selected_menu_entry, &max_tree_len, &max_tree_height);
 
     if (max_entries != 0) {
-        size_t tree_prefix_len = (terms[0]->cols > max_tree_len + 3) ? (terms[0]->cols - max_tree_len - 3) / 2 : 1;
+        size_t tree_prefix_len = menu_x(max_tree_len + 3);
+        if (tree_prefix_len == 0) tree_prefix_len = 1;
         char *tree_prefix = ext_mem_alloc(tree_prefix_len + 1);
         memset(tree_prefix, ' ', tree_prefix_len);
 
@@ -2201,12 +2216,12 @@ refresh:
 
         if (max_entries != 0) {
             if (tree_offset > 0) {
-                set_cursor_pos_helper((terms[0]->cols - 3) / 2, 3 + header_offset);
+                set_cursor_pos_helper(menu_x(3), 3 + header_offset);
                 print(SERIAL_CONSOLE ? "^^^" : "↑↑↑");
             }
 
             if (tree_offset + (terms[0]->rows - 8 - header_offset) < max_entries) {
-                set_cursor_pos_helper((terms[0]->cols - 3) / 2, terms[0]->rows - 4);
+                set_cursor_pos_helper(menu_x(3), terms[0]->rows - 4);
                 print(SERIAL_CONSOLE ? "vvv" : "↓↓↓");
             }
         }
@@ -2216,18 +2231,18 @@ refresh:
                 size_t primary_row = 1 + header_offset - (has_secondary_help ? 2 : 0);
                 if (selected_menu_entry->sub == NULL) {
                     if (editor_enabled) {
-                        set_cursor_pos_helper((terms[0]->cols - 37) / 2, primary_row);
+                        set_cursor_pos_helper(menu_x(37), primary_row);
                         print("%sARROWS\e[0m Select    %sENTER\e[0m Boot    %sE\e[0m Edit",
                               interface_help_colour, interface_help_colour, interface_help_colour);
                     } else {
-                        set_cursor_pos_helper((terms[0]->cols - 27) / 2, primary_row);
+                        set_cursor_pos_helper(menu_x(27), primary_row);
                         print("%sARROWS\e[0m Select    %sENTER\e[0m Boot",
                               interface_help_colour, interface_help_colour);
                     }
                 } else {
                     const char *action = selected_menu_entry->expanded ? "Collapse" : "Expand";
                     size_t len = 23 + strlen(action);
-                    set_cursor_pos_helper((terms[0]->cols - len) / 2, primary_row);
+                    set_cursor_pos_helper(menu_x(len), primary_row);
                     print("%sARROWS\e[0m Select    %sENTER\e[0m %s",
                           interface_help_colour, interface_help_colour, action);
                 }
@@ -2258,7 +2273,7 @@ refresh:
             size_t timeout_len = format_timeout_ms(timeout_buf, timeout_ms);
             size_t msg_len = 28 + timeout_len;
             mouse_erase_pointer();
-            set_cursor_pos_helper((terms[0]->cols - msg_len) / 2, terms[0]->rows - 2);
+            set_cursor_pos_helper(menu_x(msg_len), terms[0]->rows - 2);
             FOR_TERM(TERM->scroll_enabled = false);
             print("\e[2K%sBooting automatically in %s%s%s...\e[0m",
                   interface_help_colour, interface_help_colour_bright, timeout_buf, interface_help_colour);
